@@ -1,27 +1,28 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { CelestialIcon } from "@/components/celestial-icon"
-import { Music, Shield, Zap } from "lucide-react"
+import { useState } from "react";
+import { signIn } from "next-auth/react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { CelestialIcon } from "@/components/celestial-icon";
+import { Music, Shield, Zap } from "lucide-react";
 
 export function SpotifyLogin() {
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSpotifyLogin = () => {
-    setIsLoading(true)
-    // Simulate login process
-    setTimeout(() => {
-      setIsLoading(false)
-      // Redirect to home page
-      window.location.href = "/home"
-    }, 2000)
-  }
+  const handleSpotifyLogin = async () => {
+    setIsLoading(true);
+    try {
+      await signIn("spotify", { callbackUrl: "/home" });
+    } catch (error) {
+      console.error("Spotify login error:", error);
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen relative overflow-hidden">
-      {/* Celestial Background */}
+      {/* Background Layers */}
       <div
         className="absolute inset-0 opacity-30"
         style={{
@@ -30,8 +31,6 @@ export function SpotifyLogin() {
           backgroundPosition: "center",
         }}
       />
-
-      {/* Mystical Overlay */}
       <div
         className="absolute inset-0 opacity-20"
         style={{
@@ -40,8 +39,6 @@ export function SpotifyLogin() {
           backgroundPosition: "center",
         }}
       />
-
-      {/* Gradient Overlay */}
       <div className="absolute inset-0 bg-gradient-to-br from-indigo-950/90 via-purple-950/90 to-black/90" />
 
       {/* Main Content */}
@@ -53,22 +50,42 @@ export function SpotifyLogin() {
               <div className="relative">
                 <CelestialIcon type="eye" size="xl" className="text-gold-400" />
                 <div className="absolute -top-2 -right-2">
-                  <CelestialIcon type="mystical" size="sm" className="text-purple-300 animate-pulse" />
+                  <CelestialIcon
+                    type="mystical"
+                    size="sm"
+                    className="text-purple-300 animate-pulse"
+                  />
                 </div>
               </div>
             </div>
-            <h1 className="font-cinzel text-4xl font-bold text-gold-100 mb-4 glow-text">Ophiuchus</h1>
-            <p className="font-cormorant text-xl text-purple-200 mb-2">The 13th Zodiac of Songs</p>
-            <p className="font-poppins text-sm text-purple-300/80">Unlock your cosmic musical destiny</p>
+            <h1 className="font-cinzel text-4xl font-bold text-gold-100 mb-4 glow-text">
+              Ophiuchus
+            </h1>
+            <p className="font-cormorant text-xl text-purple-200 mb-2">
+              The 13th Zodiac of Songs
+            </p>
+            <p className="font-poppins text-sm text-purple-300/80">
+              Unlock your cosmic musical destiny
+            </p>
           </div>
 
           {/* Login Card */}
           <Card className="glassmorphism border-gold-400/30 p-8 mb-8">
             <div className="text-center mb-8">
               <div className="flex items-center justify-center mb-4">
-                <CelestialIcon type="sun" size="lg" className="text-gold-400 mr-3" />
-                <h2 className="font-cormorant text-2xl font-bold text-gold-100">Celestial Gateway</h2>
-                <CelestialIcon type="moon" size="lg" className="text-gold-400 ml-3" />
+                <CelestialIcon
+                  type="sun"
+                  size="lg"
+                  className="text-gold-400 mr-3"
+                />
+                <h2 className="font-cormorant text-2xl font-bold text-gold-100">
+                  Celestial Gateway
+                </h2>
+                <CelestialIcon
+                  type="moon"
+                  size="lg"
+                  className="text-gold-400 ml-3"
+                />
               </div>
               <p className="font-poppins text-purple-200 text-sm">
                 Connect your Spotify to reveal your cosmic musical profile
@@ -80,24 +97,36 @@ export function SpotifyLogin() {
               <div className="flex items-center gap-3 p-3 rounded-lg bg-black/20 border border-purple-400/20">
                 <Music className="w-5 h-5 text-green-400" />
                 <div>
-                  <p className="font-poppins text-sm font-medium text-purple-100">Analyze Your Musical Cosmos</p>
-                  <p className="font-poppins text-xs text-purple-300">Discover patterns in your listening habits</p>
+                  <p className="font-poppins text-sm font-medium text-purple-100">
+                    Analyze Your Musical Cosmos
+                  </p>
+                  <p className="font-poppins text-xs text-purple-300">
+                    Discover patterns in your listening habits
+                  </p>
                 </div>
               </div>
 
               <div className="flex items-center gap-3 p-3 rounded-lg bg-black/20 border border-purple-400/20">
                 <Shield className="w-5 h-5 text-blue-400" />
                 <div>
-                  <p className="font-poppins text-sm font-medium text-purple-100">Secure & Private</p>
-                  <p className="font-poppins text-xs text-purple-300">Your data remains protected and encrypted</p>
+                  <p className="font-poppins text-sm font-medium text-purple-100">
+                    Secure & Private
+                  </p>
+                  <p className="font-poppins text-xs text-purple-300">
+                    Your data remains protected and encrypted
+                  </p>
                 </div>
               </div>
 
               <div className="flex items-center gap-3 p-3 rounded-lg bg-black/20 border border-purple-400/20">
                 <Zap className="w-5 h-5 text-yellow-400" />
                 <div>
-                  <p className="font-poppins text-sm font-medium text-purple-100">Instant Insights</p>
-                  <p className="font-poppins text-xs text-purple-300">Real-time analysis of your musical journey</p>
+                  <p className="font-poppins text-sm font-medium text-purple-100">
+                    Instant Insights
+                  </p>
+                  <p className="font-poppins text-xs text-purple-300">
+                    Real-time analysis of your musical journey
+                  </p>
                 </div>
               </div>
             </div>
@@ -126,14 +155,27 @@ export function SpotifyLogin() {
             </p>
           </Card>
 
-          {/* Decorative Elements */}
+          {/* Decorative Icons */}
           <div className="flex justify-center space-x-8 opacity-60">
-            <CelestialIcon type="constellation" className="text-gold-400 animate-pulse" />
-            <CelestialIcon type="planet" className="text-purple-400 animate-pulse" style={{ animationDelay: "1s" }} />
-            <CelestialIcon type="mystical" className="text-blue-400 animate-pulse" style={{ animationDelay: "2s" }} />
+            <CelestialIcon
+              type="constellation"
+              className="text-gold-400 animate-pulse"
+            />
+            <div className="text-purple-400 animate-pulse" style={{ animationDelay: "1s" }}>
+              <CelestialIcon
+                type="planet"
+                className="text-purple-400"
+              />
+            </div>
+            <div className="text-blue-400 animate-pulse" style={{ animationDelay: "2s" }}>
+              <CelestialIcon
+                type="mystical"
+                className="text-blue-400"
+              />
+            </div>
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }

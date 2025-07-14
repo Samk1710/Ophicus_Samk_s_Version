@@ -4,6 +4,7 @@ import { Inter, Poppins, Cormorant_Garamond, Cinzel_Decorative } from "next/font
 import "./globals.css"
 import { Navbar } from "@/components/navbar"
 import { LunarChatbot } from "@/components/lunar-chatbot"
+import SessionProvider from "@/components/providers/session-provider"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -48,11 +49,13 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${poppins.variable} ${cormorantGaramond.variable} ${cinzelDecorative.variable} antialiased`}
       >
-        <div className="min-h-screen bg-gray-950 text-gray-100 font-inter">
-          <Navbar />
-          <main className="pt-16">{children}</main>
-          <LunarChatbot />
-        </div>
+        <SessionProvider>
+          <div className="min-h-screen bg-gray-950 text-gray-100 font-inter">
+            <Navbar />
+            <main className="pt-16">{children}</main>
+            <LunarChatbot />
+          </div>
+        </SessionProvider>
       </body>
     </html>
   )

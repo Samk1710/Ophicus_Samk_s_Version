@@ -15,7 +15,10 @@ const scopes = [
 ].join(',');
 
 const params = {
-    scope: scopes
+    scope: scopes,
+    response_type: 'code',
+    client_id: process.env.NEXT_PUBLIC_CLIENT_ID!,
+    redirect_uri: `${process.env.NEXTAUTH_URL}/api/auth/callback/spotify`
 };
 
 const queryParamString = new URLSearchParams(params);
