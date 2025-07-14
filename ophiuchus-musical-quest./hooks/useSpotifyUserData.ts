@@ -80,7 +80,7 @@ export function useSpotifyUserData() {
       return;
     }
 
-    const fetchUserData = async (artistLimit: number = 5, trackLimit: number = 50, recentTracksLimit: number = 200) => {
+    const fetchUserData = async (artistLimit: number = 5, trackLimit: number = 50, recentTracksLimit: number = 50) => {
       try {
         setLoading(true);
         setError(null);
