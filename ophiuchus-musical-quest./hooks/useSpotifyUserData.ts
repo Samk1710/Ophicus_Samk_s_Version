@@ -58,7 +58,13 @@ export interface SpotifyUserStats {
     popularity: number;
     external_urls?: { spotify: string };
   }>;
-  listeningHours?: Array<{ hour: number; minutes: number }>;
+  topArtists: Array<{
+    name: string;
+    images: { url: string }[];
+    followers?: { total: number };
+    popularity?: number;
+    external_urls?: { spotify: string };
+  }>;
 }
 
 export function useSpotifyUserData() {
@@ -227,19 +233,6 @@ export function useSpotifyUserData() {
           )
         ).size;
 
-        // Generate listening hours data for current month
-        const listeningHours = Array.from({ length: 24 }, (_, hour) => {
-          const tracksInHour = currentMonthTracks.filter((item: any) => {
-            const playedAt = new Date(item.played_at);
-            return playedAt.getHours() === hour;
-          }).length;
-          
-          return {
-            hour,
-            minutes: Math.floor(tracksInHour * 3.5) // Estimated minutes based on tracks
-          };
-        });
-
         const userData: SpotifyUserStats = {
           topArtist: topArtistDetails,
           minutesListened: estimatedMinutes,
@@ -265,7 +258,13 @@ export function useSpotifyUserData() {
             popularity: track.popularity,
             external_urls: track.external_urls
           })),
-          listeningHours
+          topArtists: topArtists.body.items.slice(0, 10).map((artist: any) => ({
+            name: artist.name,
+            images: artist.images,
+            followers: artist.followers,
+            popularity: artist.popularity,
+            external_urls: artist.external_urls
+          }))
         };
 
         console.log("User data compiled successfully");

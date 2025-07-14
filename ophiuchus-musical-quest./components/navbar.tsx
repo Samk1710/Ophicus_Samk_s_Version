@@ -57,8 +57,8 @@ export function Navbar() {
 						</div>
 					</div>
 
-					{/* User Profile */}
-					<div className="hidden md:flex items-center">
+					{/* User Profile and Username */}
+					<div className="hidden md:flex items-center gap-3">
 						<UserProfile />
 					</div>
 

@@ -42,7 +42,11 @@ export default function UserProfile() {
   }
 
   return (
-    <DropdownMenu>
+    <div className="flex items-center gap-3">
+      <span className="font-poppins text-sm text-gold-100 hidden lg:block">
+        {session.user?.name || "Cosmic Explorer"}
+      </span>
+      <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-10 w-10 rounded-full p-0">
           <Avatar className="h-10 w-10 border-2 border-gold-400/50 hover:border-gold-400 transition-colors">
@@ -99,5 +103,6 @@ export default function UserProfile() {
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+    </div>
   )
 }

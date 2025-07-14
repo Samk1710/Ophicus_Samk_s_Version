@@ -12,6 +12,7 @@ import { SkeletonStatsCard, SkeletonCurrentTrack, SkeletonRecentTracks } from "@
 import { ListeningGraph } from "@/components/listening-graph"
 import { TopSongCard } from "@/components/top-song-card"
 import { TopArtistCard } from "@/components/top-artist-card"
+import { TopArtistsCard } from "@/components/top-artists-card"
 import { useSpotifyUserData } from "@/hooks/useSpotifyUserData"
 import { useSpotifyControls } from "@/hooks/useSpotifyControls"
 import {
@@ -231,7 +232,6 @@ export default function HomePage() {
                       celestialIcon: "moon" as const,
                       gradient: "bg-gradient-to-br from-blue-600/30 to-indigo-600/30",
                       size: "md" as const,
-                      graph: userData?.listeningHours,
                     },
                     {
                       title: "Top Genre",
@@ -294,13 +294,6 @@ export default function HomePage() {
                           </div>
                         </div>
 
-                        {/* Listening Graph */}
-                        {stat.graph && (
-                          <div className="mb-4">
-                            <ListeningGraph data={stat.graph} />
-                          </div>
-                        )}
-
                         <div className="mb-2">
                           <h3 className="font-cinzel text-3xl font-bold text-gold-100 glow-text">{stat.value}</h3>
                           {stat.subtitle && <p className="font-poppins text-sm text-purple-200 mt-1">{stat.subtitle}</p>}
@@ -314,33 +307,42 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Top Songs Section */}
-          <div className="flex justify-center mb-12">
-            <Card className="glassmorphism border-gold-400/30 p-8 max-w-4xl w-full">
-              <div className="flex items-center gap-3 mb-6">
-                <CelestialIcon type="sun" className="text-gold-400" />
-                <h2 className="font-cinzel text-2xl font-bold text-gold-100">Top Cosmic Anthems</h2>
-              </div>
+          {/* Top Songs and Artists Section */}
+          <div className="mb-12 flex justify-center">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-7xl w-full">
+              {/* Top Songs */}
+              <Card className="glassmorphism border-gold-400/30 p-8">
+                <div className="flex items-center gap-3 mb-6">
+                  <CelestialIcon type="sun" className="text-gold-400" />
+                  <h2 className="font-cinzel text-2xl font-bold text-gold-100">Top Cosmic Anthems</h2>
+                </div>
 
-              {loading ? (
-                <div className="space-y-4">
-                  {Array.from({ length: 5 }).map((_, index) => (
-                    <TopSongCard key={index} rank={index + 1} />
-                  ))}
-                </div>
-              ) : userData?.topTracks && userData.topTracks.length > 0 ? (
-                <div className="space-y-4">
-                  {userData.topTracks.slice(0, 5).map((track, index) => (
-                    <TopSongCard key={index} track={track} rank={index + 1} />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <CelestialIcon type="planet" size="lg" className="text-purple-400 mx-auto mb-4" />
-                  <p className="font-poppins text-purple-300">— — — No top tracks available — — —</p>
-                </div>
-              )}
-            </Card>
+                {loading ? (
+                  <div className="space-y-4">
+                    {Array.from({ length: 5 }).map((_, index) => (
+                      <TopSongCard key={index} rank={index + 1} />
+                    ))}
+                  </div>
+                ) : userData?.topTracks && userData.topTracks.length > 0 ? (
+                  <div className="space-y-4">
+                    {userData.topTracks.slice(0, 5).map((track, index) => (
+                      <TopSongCard key={index} track={track} rank={index + 1} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <CelestialIcon type="planet" size="lg" className="text-purple-400 mx-auto mb-4" />
+                    <p className="font-poppins text-purple-300">— — — No top tracks available — — —</p>
+                  </div>
+                )}
+              </Card>
+
+              {/* Top Artists */}
+              <TopArtistsCard 
+                artists={userData?.topArtists}
+                loading={loading}
+              />
+            </div>
           </div>
 
           {/* Recent Tracks */}
