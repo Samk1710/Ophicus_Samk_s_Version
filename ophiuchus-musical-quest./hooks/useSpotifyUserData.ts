@@ -8,6 +8,8 @@ export interface SpotifyUserStats {
     images: { url: string }[];
     followers?: { total: number };
     popularity?: number;
+    genres?: string[];
+    external_urls?: { spotify: string };
   } | null;
   minutesListened: number;
   topGenre: string;
@@ -25,6 +27,7 @@ export interface SpotifyUserStats {
     progress_ms?: number;
     duration_ms?: number;
     external_urls?: { spotify: string };
+    played_at?: string;
   } | null;
   recentTracks: Array<{
     track: {
@@ -55,6 +58,7 @@ export interface SpotifyUserStats {
     popularity: number;
     external_urls?: { spotify: string };
   }>;
+  listeningHours?: Array<{ hour: number; minutes: number }>;
 }
 
 export function useSpotifyUserData() {
@@ -81,12 +85,27 @@ export function useSpotifyUserData() {
         const userProfile = await spotifyApi.getMe();
         console.log("User profile fetched:", userProfile.body.display_name);
 
-        // Fetch top artists (long term)
+        // Fetch top artists (long term) with detailed info
         const topArtists = await spotifyApi.getMyTopArtists({
           limit: 5,
           time_range: 'long_term'
         });
         console.log("Top artists fetched:", topArtists.body.items.length);
+
+        // Get detailed artist info for the top artist
+        let topArtistDetails = null;
+        if (topArtists.body.items.length > 0) {
+          const artistId = topArtists.body.items[0].id;
+          const artistDetails = await spotifyApi.getArtist(artistId);
+          topArtistDetails = {
+            name: artistDetails.body.name,
+            images: artistDetails.body.images,
+            followers: artistDetails.body.followers,
+            popularity: artistDetails.body.popularity,
+            genres: artistDetails.body.genres,
+            external_urls: artistDetails.body.external_urls
+          };
+        }
 
         // Fetch top tracks for calculating genres and other stats
         const topTracks = await spotifyApi.getMyTopTracks({
@@ -95,12 +114,12 @@ export function useSpotifyUserData() {
         });
         console.log("Top tracks fetched:", topTracks.body.items.length);
 
-        // Fetch currently playing track
-        let currentTrack = null;
+        // Fetch currently playing track or last played track
+        let currentOrLastTrack = null;
         try {
           const currentlyPlaying = await spotifyApi.getMyCurrentPlayingTrack();
           if (currentlyPlaying.body && currentlyPlaying.body.item) {
-            currentTrack = {
+            currentOrLastTrack = {
               name: currentlyPlaying.body.item.name,
               artists: currentlyPlaying.body.item.artists,
               album: currentlyPlaying.body.item.album,
@@ -109,10 +128,31 @@ export function useSpotifyUserData() {
               duration_ms: currentlyPlaying.body.item.duration_ms,
               external_urls: currentlyPlaying.body.item.external_urls
             };
-            console.log("Currently playing:", currentTrack.name);
+            console.log("Currently playing:", currentOrLastTrack.name);
           }
         } catch (currentTrackError) {
-          console.log("No track currently playing");
+          console.log("No track currently playing, fetching last played track");
+        }
+
+        // If no current track, get the last played track
+        if (!currentOrLastTrack) {
+          try {
+            const recentTracksForCurrent = await spotifyApi.getMyRecentlyPlayedTracks({ limit: 1 });
+            if (recentTracksForCurrent.body.items.length > 0) {
+              const lastTrack = recentTracksForCurrent.body.items[0];
+              currentOrLastTrack = {
+                name: lastTrack.track.name,
+                artists: lastTrack.track.artists,
+                album: lastTrack.track.album,
+                is_playing: false,
+                external_urls: lastTrack.track.external_urls,
+                played_at: lastTrack.played_at
+              };
+              console.log("Last played track:", currentOrLastTrack.name);
+            }
+          } catch (lastTrackError) {
+            console.log("Failed to fetch last played track:", lastTrackError);
+          }
         }
 
         // Fetch recent tracks
@@ -159,39 +199,55 @@ export function useSpotifyUserData() {
 
         console.log("Top genre calculated:", topGenre);
 
-        // Calculate estimated minutes listened (better approximation)
+        // Calculate estimated minutes listened for current month only
+        const currentDate = new Date();
+        const currentMonth = currentDate.getMonth();
+        const currentYear = currentDate.getFullYear();
+        
+        const currentMonthTracks = recentTracks.body.items.filter((item: any) => {
+          const playedDate = new Date(item.played_at);
+          return playedDate.getMonth() === currentMonth && playedDate.getFullYear() === currentYear;
+        });
+        
         const avgTrackLength = 3.5; // minutes
-        const recentTracksCount = recentTracks.body.items.length;
-        const estimatedMinutes = Math.floor(recentTracksCount * avgTrackLength * 15); // rough estimation
+        const estimatedMinutes = Math.floor(currentMonthTracks.length * avgTrackLength * 15); // improved estimation
 
         // Calculate discovery score (percentage of unique artists in recent tracks)
         const uniqueArtists = new Set(
           recentTracks.body.items.map((item: any) => item.track.artists[0].name)
         );
-        const discoveryScore = recentTracksCount > 0 
-          ? Math.floor((uniqueArtists.size / recentTracksCount) * 100)
+        const discoveryScore = recentTracks.body.items.length > 0 
+          ? Math.floor((uniqueArtists.size / recentTracks.body.items.length) * 100)
           : 0;
 
-        // Calculate active days (days with activity in recent tracks)
-        const activeDays = new Set(
-          recentTracks.body.items.map((item: any) => 
+        // Calculate active days for current month
+        const currentMonthActiveDays = new Set(
+          currentMonthTracks.map((item: any) => 
             new Date(item.played_at).toDateString()
           )
         ).size;
 
+        // Generate listening hours data for current month
+        const listeningHours = Array.from({ length: 24 }, (_, hour) => {
+          const tracksInHour = currentMonthTracks.filter((item: any) => {
+            const playedAt = new Date(item.played_at);
+            return playedAt.getHours() === hour;
+          }).length;
+          
+          return {
+            hour,
+            minutes: Math.floor(tracksInHour * 3.5) // Estimated minutes based on tracks
+          };
+        });
+
         const userData: SpotifyUserStats = {
-          topArtist: topArtists.body.items[0] ? {
-            name: topArtists.body.items[0].name,
-            images: topArtists.body.items[0].images,
-            followers: topArtists.body.items[0].followers,
-            popularity: topArtists.body.items[0].popularity
-          } : null,
+          topArtist: topArtistDetails,
           minutesListened: estimatedMinutes,
           topGenre,
-          tracksPlayed: recentTracksCount,
+          tracksPlayed: currentMonthTracks.length,
           discoveryScore,
-          activeDays,
-          currentTrack,
+          activeDays: currentMonthActiveDays,
+          currentTrack: currentOrLastTrack,
           recentTracks: recentTracks.body.items.slice(0, 6).map((item: any) => ({
             track: {
               name: item.track.name,
@@ -208,7 +264,8 @@ export function useSpotifyUserData() {
             album: track.album,
             popularity: track.popularity,
             external_urls: track.external_urls
-          }))
+          })),
+          listeningHours
         };
 
         console.log("User data compiled successfully");
