@@ -80,7 +80,7 @@ export function useSpotifyUserData() {
       return;
     }
 
-    const fetchUserData = async () => {
+    const fetchUserData = async (artistLimit: number = 5, trackLimit: number = 50, recentTracksLimit: number = 200) => {
       try {
         setLoading(true);
         setError(null);
@@ -93,14 +93,15 @@ export function useSpotifyUserData() {
 
         // Fetch top artists (long term) with detailed info
         const topArtists = await spotifyApi.getMyTopArtists({
-          limit: 5,
+          limit: artistLimit,
           time_range: 'long_term'
         });
-        console.log("Top artists fetched:", topArtists.body.items.length);
+        console.log("Top artists fetched:", topArtists.body);
 
         // Get detailed artist info for the top artist
         let topArtistDetails = null;
         if (topArtists.body.items.length > 0) {
+
           const artistId = topArtists.body.items[0].id;
           const artistDetails = await spotifyApi.getArtist(artistId);
           topArtistDetails = {
@@ -115,7 +116,7 @@ export function useSpotifyUserData() {
 
         // Fetch top tracks for calculating genres and other stats
         const topTracks = await spotifyApi.getMyTopTracks({
-          limit: 50,
+          limit: trackLimit,
           time_range: 'medium_term'
         });
         console.log("Top tracks fetched:", topTracks.body.items.length);
@@ -163,7 +164,7 @@ export function useSpotifyUserData() {
 
         // Fetch recent tracks
         const recentTracks = await spotifyApi.getMyRecentlyPlayedTracks({
-          limit: 50
+          limit: recentTracksLimit || 100
         });
         console.log("Recent tracks fetched:", recentTracks.body.items.length);
 
