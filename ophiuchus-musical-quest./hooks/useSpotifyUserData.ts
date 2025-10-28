@@ -15,7 +15,6 @@ export interface SpotifyUserStats {
   topGenre: string;
   tracksPlayed: number;
   discoveryScore: number;
-  activeDays: number;
   currentTrack: {
     name: string;
     artists: { name: string }[];
@@ -429,8 +428,14 @@ export function useSpotifyUserData() {
           return playedDate.getMonth() === currentMonth && playedDate.getFullYear() === currentYear;
         });
         
-        const avgTrackLength = 3.5; // minutes
-        const estimatedMinutes = Math.floor(currentMonthTracks.length * avgTrackLength * 15);
+        // Calculate actual minutes based on track durations
+        const totalMinutes = currentMonthTracks.reduce((total: number, item: any) => {
+          const durationMs = item.track.duration_ms || 0;
+          const durationMinutes = durationMs / (1000 * 60);
+          return total + durationMinutes;
+        }, 0);
+        
+        const estimatedMinutes = Math.floor(totalMinutes);
 
         // Calculate discovery score
         const uniqueArtists = new Set(
@@ -440,20 +445,12 @@ export function useSpotifyUserData() {
           ? Math.floor((uniqueArtists.size / recentTracks.body.items.length) * 100)
           : 0;
 
-        // Calculate active days for current month
-        const currentMonthActiveDays = new Set(
-          currentMonthTracks.map((item: any) => 
-            new Date(item.played_at).toDateString()
-          )
-        ).size;
-
         const userData: SpotifyUserStats = {
           topArtist: topArtistDetails,
           minutesListened: estimatedMinutes,
           topGenre,
           tracksPlayed: currentMonthTracks.length,
           discoveryScore,
-          activeDays: currentMonthActiveDays,
           currentTrack: currentOrLastTrack,
           recentTracks: recentTracks.body.items.slice(0, 6).map((item: any) => ({
             track: {
