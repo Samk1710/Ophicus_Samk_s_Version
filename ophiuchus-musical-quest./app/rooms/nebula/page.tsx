@@ -2,44 +2,127 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { CosmicBackground } from "@/components/cosmic-background"
 import { ProgressTracker } from "@/components/progress-tracker"
 import { CelestialIcon } from "@/components/celestial-icon"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Send, Circle } from "lucide-react"
+import { Send, Circle, Loader2 } from "lucide-react"
 import Link from "next/link"
+import { useGameState } from "@/components/providers/game-state-provider"
+import { SpotifySearch } from "@/components/spotify-search"
+import { useRouter } from "next/navigation"
 
 export default function NebulaRoom() {
-  const [guess, setGuess] = useState("")
+  const [selectedSong, setSelectedSong] = useState<{id: string; name: string; artist: string} | null>(null)
   const [attempts, setAttempts] = useState(3)
   const [showResult, setShowResult] = useState(false)
+  const [isCorrect, setIsCorrect] = useState(false)
+  const [clueText, setClueText] = useState("")
+  const [riddle, setRiddle] = useState("")
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const { sessionId, gameSession, refreshGameState } = useGameState()
+  const router = useRouter()
 
-  const riddle = `In chambers of echo where silence once dwelt,
-A voice breaks the void with passion unfelt.
-Through valleys of sound and mountains of beat,
-Where rhythm and melody tenderly meet.
+  console.log('[Nebula] Component mounted, session:', sessionId)
+  console.log('[Nebula] Game session:', gameSession)
 
-Born from the heart of a queen of the night,
-Her voice pierces darkness, bringing forth light.
-In purple she reigns, with power so true,
-What song holds the key to this celestial clue?`
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (attempts > 0) {
-      setAttempts(attempts - 1)
-      // Here you would check the answer
-      setShowResult(true)
+  // Fetch riddle on mount
+  useEffect(() => {
+    if (!sessionId) {
+      console.log('[Nebula] No session ID, redirecting to home')
+      router.push('/home')
+      return
     }
+    fetchRiddle()
+  }, [sessionId])
+
+  const fetchRiddle = async () => {
+    console.log('[Nebula] Fetching riddle...')
+    setIsLoading(true)
+    
+    try {
+      const response = await fetch(`/api/rooms/nebula?sessionId=${sessionId}`)
+      const data = await response.json()
+      console.log('[Nebula] Riddle data:', data)
+      
+      setRiddle(data.riddle || '')
+      setAttempts(3 - (data.attempts || 0))
+      
+      if (data.completed) {
+        setIsCorrect(true)
+        setShowResult(true)
+        setClueText(data.clue || '')
+      }
+    } catch (error) {
+      console.error('[Nebula] Failed to fetch riddle:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    
+    if (!selectedSong || attempts === 0 || isSubmitting) {
+      console.log('[Nebula] Submit blocked:', { selectedSong, attempts, isSubmitting })
+      return
+    }
+
+    setIsSubmitting(true)
+    console.log('[Nebula] Submitting guess:', selectedSong)
+
+    try {
+      const response = await fetch('/api/rooms/nebula', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId,
+          guessedTrackId: selectedSong.id
+        })
+      })
+
+      const data = await response.json()
+      console.log('[Nebula] Result:', data)
+
+      setAttempts(data.attemptsRemaining || 0)
+      setIsCorrect(data.correct || false)
+      setShowResult(true)
+      
+      if (data.correct) {
+        setClueText(data.clue || '')
+        await refreshGameState()
+        console.log('[Nebula] CORRECT! Moving to next room...')
+      }
+    } catch (error) {
+      console.error('[Nebula] Submit failed:', error)
+      alert('Failed to submit your guess. Please try again.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  // Get completed rooms for progress tracker
+  const completedRooms = gameSession?.roomClues
+    ? Object.entries(gameSession.roomClues)
+        .filter(([_, clue]) => clue?.completed)
+        .map(([roomId]) => roomId)
+    : []
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-purple-400" />
+      </div>
+    )
   }
 
   return (
     <div className="min-h-screen relative overflow-hidden cosmic-bg">
       <CosmicBackground />
-      <ProgressTracker completedRooms={[]} currentRoom="nebula" />
+      <ProgressTracker completedRooms={completedRooms} currentRoom="nebula" />
 
       {/* Moon Phases Background */}
       <div
@@ -112,16 +195,32 @@ What song holds the key to this celestial clue?`
               </div>
 
               {/* Guess Form */}
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-4">
                 <div>
-                  <Input
-                    value={guess}
-                    onChange={(e) => setGuess(e.target.value)}
-                    placeholder="Enter your guess for the song..."
-                    className="glassmorphism border-purple-400/30 text-purple-100 placeholder-purple-300/50 text-center"
-                    disabled={attempts === 0}
+                  <p className="font-poppins text-sm text-purple-200 mb-3 text-center">
+                    Search and select the song that solves the riddle:
+                  </p>
+                  <SpotifySearch
+                    type="track"
+                    onSelect={(track: any) => {
+                      console.log('[Nebula] Song selected:', track)
+                      setSelectedSong({
+                        id: track.id,
+                        name: track.name,
+                        artist: track.artist
+                      })
+                    }}
+                    placeholder="Search for the cosmic song..."
                   />
                 </div>
+
+                {selectedSong && (
+                  <div className="bg-purple-900/20 rounded-lg p-3 border border-purple-400/30">
+                    <p className="font-poppins text-sm text-purple-200 text-center">
+                      Selected: <span className="font-bold text-gold-200">{selectedSong.name}</span> by {selectedSong.artist}
+                    </p>
+                  </div>
+                )}
 
                 {/* Attempts */}
                 <div className="flex items-center justify-center gap-2 mb-4">
@@ -134,20 +233,47 @@ What song holds the key to this celestial clue?`
                   ))}
                 </div>
 
-                <Button type="submit" className="mystical-button w-full" disabled={!guess.trim() || attempts === 0}>
-                  <Send className="w-4 h-4 mr-2" />
-                  Submit Guess
+                <Button 
+                  onClick={() => handleSubmit()}
+                  className="mystical-button w-full" 
+                  disabled={!selectedSong || attempts === 0 || isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4 mr-2" />
+                      Submit Guess
+                    </>
+                  )}
                 </Button>
-              </form>
+              </div>
 
               {/* Result */}
               {showResult && (
-                <div className="mt-6 p-4 bg-purple-900/20 rounded-lg border border-purple-400/30">
-                  <p className="font-poppins text-sm text-purple-200 text-center">
-                    {attempts > 0
+                <div className={`mt-6 p-4 rounded-lg border ${
+                  isCorrect 
+                    ? 'bg-green-900/20 border-green-400/30' 
+                    : 'bg-purple-900/20 border-purple-400/30'
+                }`}>
+                  <p className="font-poppins text-sm text-center mb-2">
+                    {isCorrect
+                      ? "✨ The nebula parts, revealing the truth! You have unlocked the first clue."
+                      : attempts > 0
                       ? "The nebula whispers... not quite right. Listen deeper to the cosmic echoes."
                       : "The mists part, revealing a fragment of the greater truth. Continue your journey."}
                   </p>
+                  
+                  {isCorrect && clueText && (
+                    <div className="mt-3 p-3 bg-black/20 rounded">
+                      <p className="font-cormorant text-gold-200 text-center italic">
+                        "{clueText}"
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

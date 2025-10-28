@@ -15,6 +15,8 @@ import { TopArtistCard } from "@/components/top-artist-card"
 import { TopArtistsCard } from "@/components/top-artists-card"
 import { useSpotifyUserData } from "@/hooks/useSpotifyUserData"
 import { useSpotifyControls } from "@/hooks/useSpotifyControls"
+import { useGameState } from "@/components/providers/game-state-provider"
+import { useRouter } from "next/navigation"
 import {
   Play,
   SkipForward,
@@ -25,7 +27,6 @@ import {
   TrendingUp,
   Headphones,
   Zap,
-  Calendar,
   Crown,
   Globe,
   Loader2,
@@ -33,8 +34,11 @@ import {
 
 export default function HomePage() {
   const [showBigBangPopup, setShowBigBangPopup] = useState(false)
+  const [isBigBangLoading, setIsBigBangLoading] = useState(false)
   const { data: session } = useSession()
   const { userData, loading, error } = useSpotifyUserData()
+  const { sessionId, gameSession, initializeBigBang, refreshGameState } = useGameState()
+  const router = useRouter()
 
   // Auto-refresh data every 30 seconds when a track is playing
   useEffect(() => {
@@ -47,6 +51,26 @@ export default function HomePage() {
       return () => clearInterval(interval);
     }
   }, [userData?.currentTrack?.is_playing]);
+
+  // Handle Big Bang initialization
+  const handleBeginJourney = async () => {
+    console.log('[HomePage] Begin Journey button clicked')
+    setIsBigBangLoading(true)
+    
+    try {
+      const newSessionId = await initializeBigBang()
+      console.log('[HomePage] Big Bang initialized, session:', newSessionId)
+      
+      // Close popup and navigate to Astral Nexus
+      setShowBigBangPopup(false)
+      router.push('/astral-nexus')
+    } catch (error) {
+      console.error('[HomePage] Failed to initialize Big Bang:', error)
+      alert('Failed to start cosmic journey. Please try again.')
+    } finally {
+      setIsBigBangLoading(false)
+    }
+  }
 
   return (
     <div className="min-h-screen relative overflow-hidden">
@@ -99,6 +123,7 @@ export default function HomePage() {
                 <h3 className="font-cinzel text-2xl font-bold text-purple-100 mb-2">Ready for Your Quest?</h3>
                 <p className="font-poppins text-purple-200 text-sm">
                   {session && userData ? 
+                    gameSession ? "Continue your cosmic journey through the celestial chambers" :
                     "Discover your cosmic song through the celestial chambers" :
                     session ? "Loading your cosmic data..." :
                     "Connect your Spotify to unlock your cosmic realm"
@@ -107,11 +132,42 @@ export default function HomePage() {
               </div>
 
               {session && userData ? (
-                <Button onClick={() => setShowBigBangPopup(true)} className="mystical-button w-full">
-                  <Crown className="w-5 h-5 mr-3" />
-                  Begin Cosmic Journey
-                  <CelestialIcon type="mystical" size="sm" className="ml-3" />
-                </Button>
+                gameSession ? (
+                  <div className="space-y-3">
+                    <Button onClick={() => router.push('/astral-nexus')} className="mystical-button w-full">
+                      <Crown className="w-5 h-5 mr-3" />
+                      Continue Journey
+                      <CelestialIcon type="mystical" size="sm" className="ml-3" />
+                    </Button>
+                    <Button 
+                      onClick={() => setShowBigBangPopup(true)} 
+                      variant="outline"
+                      className="border-purple-400/30 text-purple-200 hover:bg-purple-500/10 w-full bg-transparent"
+                    >
+                      <Music className="w-5 h-5 mr-3" />
+                      Start New Quest
+                    </Button>
+                  </div>
+                ) : (
+                  <Button 
+                    onClick={() => setShowBigBangPopup(true)} 
+                    className="mystical-button w-full"
+                    disabled={isBigBangLoading}
+                  >
+                    {isBigBangLoading ? (
+                      <>
+                        <Loader2 className="w-5 h-5 mr-3 animate-spin" />
+                        Initializing...
+                      </>
+                    ) : (
+                      <>
+                        <Crown className="w-5 h-5 mr-3" />
+                        Begin Cosmic Journey
+                        <CelestialIcon type="mystical" size="sm" className="ml-3" />
+                      </>
+                    )}
+                  </Button>
+                )
               ) : session && loading ? (
                 <Button disabled className="mystical-button w-full opacity-50">
                   <Loader2 className="w-5 h-5 mr-3 animate-spin" />
@@ -201,109 +257,273 @@ export default function HomePage() {
             )}
           </div>
 
-          {/* Stats Grid */}
+          {/* Stats Grid - Modern Bento Style */}
           <div className="mb-12 flex justify-center">
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6 auto-rows-fr max-w-6xl">
-              {loading ? (
-                <>
-                  <div className="col-span-2 row-span-2 md:col-span-2 lg:col-span-3">
+            <div className="w-full max-w-7xl">
+              {/* Section Header */}
+              <div className="text-center mb-8">
+                <div className="flex items-center justify-center mb-4">
+                  <CelestialIcon type="constellation" size="md" className="text-gold-400 mr-3" />
+                  <h2 className="font-cinzel text-3xl font-bold text-gold-100">Your Cosmic Statistics</h2>
+                  <CelestialIcon type="constellation" size="md" className="text-gold-400 ml-3" />
+                </div>
+                <p className="font-cormorant text-lg text-purple-200">
+                  Witness the celestial patterns of your musical journey
+                </p>
+              </div>
+
+              {/* Desktop Grid */}
+              <div className="hidden md:grid grid-cols-6 grid-rows-3 gap-4 h-[600px]">
+                {loading ? (
+                  <>
+                    <div className="col-span-2 row-span-3">
+                      <TopArtistCard />
+                    </div>
+                    <div className="col-span-3 row-span-2">
+                      <SkeletonStatsCard size="lg" />
+                    </div>
+                    <div className="col-span-1 row-span-1">
+                      <SkeletonStatsCard size="md" />
+                    </div>
+                    <div className="col-span-2 row-span-1">
+                      <SkeletonStatsCard size="md" />
+                    </div>
+                    <div className="col-span-1 row-span-1">
+                      <SkeletonStatsCard size="md" />
+                    </div>
+                    <div className="col-span-1 row-span-1">
+                      <SkeletonStatsCard size="md" />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {/* Top Artist Card - Large focal point */}
+                    <div className="col-span-2 row-span-3">
+                      <TopArtistCard artist={userData?.topArtist || undefined} />
+                    </div>
+                    
+                    {/* Top Track Card - Hero section */}
+                    <div className="col-span-3 row-span-2">
+                      <Card className="glassmorphism border-gold-400/30 p-6 relative overflow-hidden group hover:scale-[1.02] transition-all duration-500 h-full">
+                        <div className="absolute inset-0 bg-gradient-to-br from-purple-600/20 to-pink-600/20 opacity-60" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                        <div className="relative z-10 h-full flex flex-col">
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2">
+                              <Music className="w-5 h-5 text-purple-400" />
+                              <h3 className="font-cinzel text-xl font-bold text-gold-100">Top Cosmic Track</h3>
+                            </div>
+                            <CelestialIcon type="sun" size="sm" className="text-gold-400" />
+                          </div>
+                          {userData?.topTracks && userData.topTracks.length > 0 ? (
+                            <div className="flex-1 flex items-center gap-6">
+                              <div className="w-20 h-20 rounded-xl overflow-hidden bg-gradient-to-br from-purple-600/30 to-pink-600/30 flex items-center justify-center shadow-2xl">
+                                {userData.topTracks[0].album?.images?.[0]?.url ? (
+                                  <img 
+                                    src={userData.topTracks[0].album.images[0].url} 
+                                    alt={`${userData.topTracks[0].album.name} cover`}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <CelestialIcon type="sun" size="lg" className="text-purple-400" />
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-cinzel text-2xl font-bold text-gold-100 mb-2 truncate">
+                                  {userData.topTracks[0].name}
+                                </h4>
+                                <p className="font-poppins text-lg text-purple-300 mb-1 truncate">
+                                  {userData.topTracks[0].artists.map((artist: any) => artist.name).join(", ")}
+                                </p>
+                                <p className="font-poppins text-sm text-purple-400">Your most played anthem</p>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex-1 flex items-center justify-center">
+                              <div className="text-center">
+                                <p className="font-cinzel text-2xl font-bold text-gold-100 mb-2">— — —</p>
+                                <p className="font-poppins text-lg text-purple-300">No top track available</p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </Card>
+                    </div>
+
+                    {/* Top Genre - Compact card */}
+                    <div className="col-span-1 row-span-1">
+                      <Card className="glassmorphism border-gold-400/30 p-4 relative overflow-hidden group hover:scale-105 transition-all duration-300 h-full">
+                        <div className="absolute inset-0 bg-gradient-to-br from-green-600/20 to-teal-600/20 opacity-60" />
+                        <div className="relative z-10 h-full flex flex-col">
+                          <div className="flex items-center justify-between mb-3">
+                            <TrendingUp className="w-4 h-4 text-green-400" />
+                            <CelestialIcon type="mystical" size="sm" className="text-gold-400" />
+                          </div>
+                          <div className="flex-1 flex flex-col justify-center">
+                            <h4 className="font-poppins text-xs text-purple-300 mb-1">Top Genre</h4>
+                            <p className="font-cinzel text-lg font-bold text-gold-100 truncate">
+                              {userData?.topGenre || "— — —"}
+                            </p>
+                            <p className="font-poppins text-xs text-purple-400 mt-1">Your frequency</p>
+                          </div>
+                        </div>
+                      </Card>
+                    </div>
+
+                    {/* Tracks Played - Medium card */}
+                    <div className="col-span-2 row-span-1">
+                      <Card className="glassmorphism border-gold-400/30 p-4 relative overflow-hidden group hover:scale-105 transition-all duration-300 h-full">
+                        <div className="absolute inset-0 bg-gradient-to-br from-orange-600/20 to-red-600/20 opacity-60" />
+                        <div className="relative z-10 h-full flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <Headphones className="w-5 h-5 text-orange-400" />
+                            <div>
+                              <h4 className="font-poppins text-xs text-purple-300 mb-1">Tracks Played</h4>
+                              <p className="font-cinzel text-2xl font-bold text-gold-100">
+                                {userData?.tracksPlayed ? userData.tracksPlayed.toString() : "— — —"}
+                              </p>
+                              <p className="font-poppins text-xs text-purple-400">This month</p>
+                            </div>
+                          </div>
+                          <CelestialIcon type="constellation" size="sm" className="text-gold-400" />
+                        </div>
+                      </Card>
+                    </div>
+
+                    {/* Discovery Score - Compact card */}
+                    <div className="col-span-1 row-span-1">
+                      <Card className="glassmorphism border-gold-400/30 p-4 relative overflow-hidden group hover:scale-105 transition-all duration-300 h-full">
+                        <div className="absolute inset-0 bg-gradient-to-br from-yellow-600/20 to-orange-600/20 opacity-60" />
+                        <div className="relative z-10 h-full flex flex-col">
+                          <div className="flex items-center justify-between mb-3">
+                            <Zap className="w-4 h-4 text-yellow-400" />
+                            <CelestialIcon type="eye" size="sm" className="text-gold-400" />
+                          </div>
+                          <div className="flex-1 flex flex-col justify-center">
+                            <h4 className="font-poppins text-xs text-purple-300 mb-1">Discovery</h4>
+                            <p className="font-cinzel text-lg font-bold text-gold-100">
+                              {userData?.discoveryScore ? `${userData.discoveryScore}%` : "— —"}
+                            </p>
+                            <p className="font-poppins text-xs text-purple-400 mt-1">Explorer level</p>
+                          </div>
+                        </div>
+                      </Card>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Mobile Grid */}
+              <div className="md:hidden grid grid-cols-1 gap-4">
+                {loading ? (
+                  <>
                     <TopArtistCard />
-                  </div>
-                  <SkeletonStatsCard size="md" />
-                  <SkeletonStatsCard size="md" />
-                  <SkeletonStatsCard size="sm" />
-                  <SkeletonStatsCard size="sm" />
-                  <SkeletonStatsCard size="sm" />
-                </>
-              ) : (
-                <>
-                  {/* Top Artist Card - Special Layout */}
-                  <div className="col-span-2 row-span-2 md:col-span-2 lg:col-span-3">
+                    <SkeletonStatsCard size="lg" />
+                    <div className="grid grid-cols-2 gap-4">
+                      <SkeletonStatsCard size="md" />
+                      <SkeletonStatsCard size="md" />
+                    </div>
+                    <SkeletonStatsCard size="md" />
+                  </>
+                ) : (
+                  <>
+                    {/* Top Artist Card - Mobile */}
                     <TopArtistCard artist={userData?.topArtist || undefined} />
-                  </div>
-                  
-                  {/* Other Stats */}
-                  {[
-                    {
-                      title: "Minutes Listened",
-                      value: userData?.minutesListened ? userData.minutesListened.toLocaleString() : "— — —",
-                      subtitle: "This month",
-                      icon: <Clock className="w-5 h-5 text-blue-400" />,
-                      celestialIcon: "moon" as const,
-                      gradient: "bg-gradient-to-br from-blue-600/30 to-indigo-600/30",
-                      size: "md" as const,
-                    },
-                    {
-                      title: "Top Genre",
-                      value: userData?.topGenre || "— — —",
-                      subtitle: "Your celestial frequency",
-                      icon: <TrendingUp className="w-5 h-5 text-green-400" />,
-                      celestialIcon: "mystical" as const,
-                      gradient: "bg-gradient-to-br from-green-600/30 to-teal-600/30",
-                      size: "md" as const,
-                    },
-                    {
-                      title: "Tracks Played",
-                      value: userData?.tracksPlayed ? userData.tracksPlayed.toString() : "— — —",
-                      icon: <Headphones className="w-5 h-5 text-orange-400" />,
-                      celestialIcon: "constellation" as const,
-                      gradient: "bg-gradient-to-br from-orange-600/30 to-red-600/30",
-                      size: "sm" as const,
-                    },
-                    {
-                      title: "Discovery Score",
-                      value: userData?.discoveryScore ? `${userData.discoveryScore}%` : "— —",
-                      subtitle: userData?.discoveryScore ? "Cosmic explorer" : "",
-                      icon: <Zap className="w-5 h-5 text-yellow-400" />,
-                      celestialIcon: "eye" as const,
-                      gradient: "bg-gradient-to-br from-yellow-600/30 to-orange-600/30",
-                      size: "sm" as const,
-                    },
-                    {
-                      title: "Active Days",
-                      value: userData?.activeDays ? `${userData.activeDays}/30` : "— —",
-                      icon: <Calendar className="w-5 h-5 text-cyan-400" />,
-                      celestialIcon: "planet" as const,
-                      gradient: "bg-gradient-to-br from-cyan-600/30 to-blue-600/30",
-                      size: "sm" as const,
-                    },
-                  ].map((stat, index) => {
-                  const sizeClasses = {
-                    sm: "col-span-1 row-span-1",
-                    md: "col-span-1 row-span-2 md:col-span-2",
-                    lg: "col-span-1 row-span-2 md:col-span-2 lg:col-span-3",
-                  }
-
-                  return (
-                    <Card
-                      key={index}
-                      className={`glassmorphism border-gold-400/30 p-6 ${sizeClasses[stat.size]} relative overflow-hidden group hover:scale-105 transition-all duration-300`}
-                    >
-                      {/* Gradient Overlay */}
-                      <div className={`absolute inset-0 ${stat.gradient} opacity-20`} />
-
-                      {/* Content */}
+                    
+                    {/* Top Track Card - Mobile */}
+                    <Card className="glassmorphism border-gold-400/30 p-6 relative overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-br from-purple-600/20 to-pink-600/20 opacity-60" />
                       <div className="relative z-10">
                         <div className="flex items-center justify-between mb-4">
-                          <div className="flex items-center gap-3">
-                            {stat.icon}
-                            <CelestialIcon type={stat.celestialIcon} className="text-gold-400" />
+                          <div className="flex items-center gap-2">
+                            <Music className="w-5 h-5 text-purple-400" />
+                            <h3 className="font-cinzel text-lg font-bold text-gold-100">Top Cosmic Track</h3>
                           </div>
-                          <div className="text-right">
-                            <p className="font-poppins text-xs text-purple-300 uppercase tracking-wider">{stat.title}</p>
+                          <CelestialIcon type="sun" size="sm" className="text-gold-400" />
+                        </div>
+                        {userData?.topTracks && userData.topTracks.length > 0 ? (
+                          <div className="flex items-center gap-4">
+                            <div className="w-16 h-16 rounded-lg overflow-hidden bg-gradient-to-br from-purple-600/30 to-pink-600/30 flex items-center justify-center">
+                              {userData.topTracks[0].album?.images?.[0]?.url ? (
+                                <img 
+                                  src={userData.topTracks[0].album.images[0].url} 
+                                  alt={`${userData.topTracks[0].album.name} cover`}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <CelestialIcon type="sun" size="sm" className="text-purple-400" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-cinzel text-lg font-bold text-gold-100 truncate">
+                                {userData.topTracks[0].name}
+                              </p>
+                              <p className="font-poppins text-sm text-purple-300 truncate">
+                                {userData.topTracks[0].artists.map((artist: any) => artist.name).join(", ")}
+                              </p>
+                              <p className="font-poppins text-xs text-purple-400">Your most played anthem</p>
+                            </div>
                           </div>
-                        </div>
-
-                        <div className="mb-2">
-                          <h3 className="font-cinzel text-3xl font-bold text-gold-100 glow-text">{stat.value}</h3>
-                          {stat.subtitle && <p className="font-poppins text-sm text-purple-200 mt-1">{stat.subtitle}</p>}
-                        </div>
+                        ) : (
+                          <div className="text-center">
+                            <p className="font-cinzel text-lg font-bold text-gold-100">— — —</p>
+                            <p className="font-poppins text-sm text-purple-300">No top track available</p>
+                          </div>
+                        )}
                       </div>
                     </Card>
-                  )
-                })}
-                </>
-              )}
+
+                    {/* Stats Row - Mobile */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <Card className="glassmorphism border-gold-400/30 p-4 relative overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-br from-green-600/20 to-teal-600/20 opacity-60" />
+                        <div className="relative z-10 text-center">
+                          <div className="flex items-center justify-center mb-2">
+                            <TrendingUp className="w-4 h-4 text-green-400 mr-2" />
+                            <h4 className="font-poppins text-xs text-purple-300">Top Genre</h4>
+                          </div>
+                          <p className="font-cinzel text-lg font-bold text-gold-100 mb-1 truncate">
+                            {userData?.topGenre || "— — —"}
+                          </p>
+                          <CelestialIcon type="mystical" size="sm" className="text-gold-400 mx-auto" />
+                        </div>
+                      </Card>
+
+                      <Card className="glassmorphism border-gold-400/30 p-4 relative overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-br from-yellow-600/20 to-orange-600/20 opacity-60" />
+                        <div className="relative z-10 text-center">
+                          <div className="flex items-center justify-center mb-2">
+                            <Zap className="w-4 h-4 text-yellow-400 mr-2" />
+                            <h4 className="font-poppins text-xs text-purple-300">Discovery</h4>
+                          </div>
+                          <p className="font-cinzel text-lg font-bold text-gold-100 mb-1">
+                            {userData?.discoveryScore ? `${userData.discoveryScore}%` : "— —"}
+                          </p>
+                          <CelestialIcon type="eye" size="sm" className="text-gold-400 mx-auto" />
+                        </div>
+                      </Card>
+                    </div>
+
+                    {/* Tracks Played - Mobile */}
+                    <Card className="glassmorphism border-gold-400/30 p-4 relative overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-br from-orange-600/20 to-red-600/20 opacity-60" />
+                      <div className="relative z-10 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Headphones className="w-5 h-5 text-orange-400" />
+                          <div>
+                            <h4 className="font-poppins text-xs text-purple-300 mb-1">Tracks Played</h4>
+                            <p className="font-cinzel text-xl font-bold text-gold-100">
+                              {userData?.tracksPlayed ? userData.tracksPlayed.toString() : "— — —"}
+                            </p>
+                            <p className="font-poppins text-xs text-purple-400">This month</p>
+                          </div>
+                        </div>
+                        <CelestialIcon type="constellation" size="sm" className="text-gold-400" />
+                      </div>
+                    </Card>
+                  </>
+                )}
+              </div>
             </div>
           </div>
 
@@ -357,36 +577,33 @@ export default function HomePage() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {userData.recentTracks.map((item: any, index: number) => {
-                    // Calculate play count (this is a rough estimation since Spotify doesn't provide exact play counts in this API)
-                    const playCount = Math.floor(Math.random() * 50) + 10; // Fallback random number for display
-                    
-                    return (
-                      <div
-                        key={index}
-                        className="flex items-center gap-3 p-3 rounded-lg bg-black/20 border border-purple-400/20 hover:border-gold-400/30 transition-all duration-300"
-                      >
-                        <div className="w-12 h-12 rounded-lg overflow-hidden bg-gradient-to-br from-purple-600/30 to-pink-600/30 flex items-center justify-center">
-                          {item.track.album?.images?.[0]?.url ? (
-                            <img 
-                              src={item.track.album.images[0].url} 
-                              alt={`${item.track.album.name} cover`}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <CelestialIcon type="planet" size="sm" className="text-purple-400" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-poppins text-sm font-medium text-purple-100 truncate">{item.track.name}</p>
-                          <p className="font-poppins text-xs text-purple-300 truncate">
-                            {item.track.artists.map((artist: any) => artist.name).join(", ")}
-                          </p>
-                        </div>
-                        <span className="font-poppins text-xs text-gold-400">{playCount} plays</span>
+                  {userData.recentTracks.map((item: any, index: number) => (
+                    <div
+                      key={index}
+                      className="flex items-center gap-3 p-3 rounded-lg bg-black/20 border border-purple-400/20 hover:border-gold-400/30 transition-all duration-300"
+                    >
+                      <div className="w-12 h-12 rounded-lg overflow-hidden bg-gradient-to-br from-purple-600/30 to-pink-600/30 flex items-center justify-center">
+                        {item.track.album?.images?.[0]?.url ? (
+                          <img 
+                            src={item.track.album.images[0].url} 
+                            alt={`${item.track.album.name} cover`}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <CelestialIcon type="planet" size="sm" className="text-purple-400" />
+                        )}
                       </div>
-                    )
-                  })}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-poppins text-sm font-medium text-purple-100 truncate">{item.track.name}</p>
+                        <p className="font-poppins text-xs text-purple-300 truncate">
+                          {item.track.artists.map((artist: any) => artist.name).join(", ")}
+                        </p>
+                        <p className="font-poppins text-xs text-purple-400 truncate">
+                          {new Date(item.played_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </Card>
             ) : (

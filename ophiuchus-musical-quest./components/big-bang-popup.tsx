@@ -4,6 +4,8 @@ import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { CelestialIcon } from "@/components/celestial-icon"
 import { X } from "lucide-react"
+import { useGameState } from "@/components/providers/game-state-provider"
+import { useRouter } from "next/navigation"
 
 interface BigBangPopupProps {
   isOpen: boolean
@@ -13,6 +15,9 @@ interface BigBangPopupProps {
 export function BigBangPopup({ isOpen, onClose }: BigBangPopupProps) {
   const [stage, setStage] = useState(0)
   const [progress, setProgress] = useState(0)
+  const [isInitializing, setIsInitializing] = useState(false)
+  const { initializeBigBang } = useGameState()
+  const router = useRouter()
 
   const stages = [
     "Initiating cosmic consciousness...",
@@ -27,26 +32,51 @@ export function BigBangPopup({ isOpen, onClose }: BigBangPopupProps) {
     if (!isOpen) {
       setStage(0)
       setProgress(0)
+      setIsInitializing(false)
       return
     }
 
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval)
-          setTimeout(() => {
-            onClose()
-            // Redirect to astral nexus
-            window.location.href = "/astral-nexus"
-          }, 1000)
-          return 100
-        }
-        return prev + 2
-      })
-    }, 100)
+    // Start Big Bang initialization
+    const startBigBang = async () => {
+      if (isInitializing) return
+      
+      setIsInitializing(true)
+      console.log('[BigBangPopup] Starting Big Bang initialization')
+      
+      try {
+        // Start progress animation
+        const interval = setInterval(() => {
+          setProgress((prev) => {
+            if (prev >= 95) {
+              clearInterval(interval)
+              return 95 // Stop at 95% until actual initialization completes
+            }
+            return prev + 2
+          })
+        }, 100)
 
-    return () => clearInterval(interval)
-  }, [isOpen, onClose])
+        // Initialize Big Bang
+        const sessionId = await initializeBigBang()
+        console.log('[BigBangPopup] Big Bang initialized successfully:', sessionId)
+        
+        // Complete progress
+        clearInterval(interval)
+        setProgress(100)
+        
+        // Wait a moment then redirect
+        setTimeout(() => {
+          onClose()
+          router.push('/astral-nexus')
+        }, 1000)
+      } catch (error) {
+        console.error('[BigBangPopup] Failed to initialize Big Bang:', error)
+        alert('Failed to start cosmic journey. Please try again.')
+        onClose()
+      }
+    }
+
+    startBigBang()
+  }, [isOpen])
 
   useEffect(() => {
     const stageIndex = Math.floor((progress / 100) * stages.length)
@@ -90,21 +120,23 @@ export function BigBangPopup({ isOpen, onClose }: BigBangPopupProps) {
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-purple-300 hover:text-purple-100 transition-colors"
+          disabled={isInitializing}
         >
           <X className="w-5 h-5" />
         </button>
 
         <div className="text-center">
           {/* Central Symbol */}
-          <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-gold-500/30 to-purple-600/30 flex items-center justify-center pulse-glow">
+          <div 
+            className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-gold-500/30 to-purple-600/30 flex items-center justify-center pulse-glow transition-transform duration-100"
+            style={{
+              transform: `scale(${1 + progress / 200})`,
+            }}
+          >
             <CelestialIcon
               type="eye"
               size="lg"
               className="text-gold-400"
-              style={{
-                transform: `scale(${1 + progress / 200})`,
-                transition: "transform 0.1s ease-out",
-              }}
             />
           </div>
 

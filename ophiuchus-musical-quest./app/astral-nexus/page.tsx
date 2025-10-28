@@ -1,13 +1,15 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { CosmicBackground } from "@/components/cosmic-background"
 import { ProgressTracker } from "@/components/progress-tracker"
 import { CelestialIcon } from "@/components/celestial-icon"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Globe, Flame, Rainbow, Star } from "lucide-react"
+import { Globe, Flame, Rainbow, Star, Loader2 } from "lucide-react"
 import Link from "next/link"
+import { useGameState } from "@/components/providers/game-state-provider"
+import { useRouter } from "next/navigation"
 
 const planets = [
   {
@@ -63,8 +65,42 @@ const planets = [
 ]
 
 export default function AstralNexus() {
-  const [completedRooms] = useState<string[]>([])
   const [hoveredPlanet, setHoveredPlanet] = useState<string | null>(null)
+  const { sessionId, gameSession, refreshGameState } = useGameState()
+  const router = useRouter()
+
+  // Refresh game state when component mounts
+  useEffect(() => {
+    console.log('[AstralNexus] Component mounted, session ID:', sessionId)
+    if (sessionId) {
+      refreshGameState()
+    }
+  }, [sessionId])
+
+  // Log game session data
+  useEffect(() => {
+    console.log('[AstralNexus] Game session updated:', gameSession)
+  }, [gameSession])
+
+  // Get completed rooms from game session
+  const completedRooms = gameSession?.roomClues
+    ? Object.entries(gameSession.roomClues)
+        .filter(([_, clue]) => clue.completed)
+        .map(([roomId]) => roomId)
+    : []
+
+  console.log('[AstralNexus] Completed rooms:', completedRooms)
+
+  // If no session, redirect to home
+  if (!sessionId && typeof window !== 'undefined') {
+    console.log('[AstralNexus] No session ID, redirecting to home')
+    router.push('/home')
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-gold-400" />
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen relative overflow-hidden cosmic-bg">
@@ -153,7 +189,7 @@ export default function AstralNexus() {
                 <p className="font-poppins text-sm text-purple-200 mb-4">
                   Chambers Explored: {completedRooms.length} / 5
                 </p>
-                <div className="flex justify-center gap-2">
+                <div className="flex justify-center gap-2 mb-4">
                   {planets.map((planet) => (
                     <div
                       key={planet.id}
@@ -165,6 +201,16 @@ export default function AstralNexus() {
                     />
                   ))}
                 </div>
+                {completedRooms.length === 5 && (
+                  <div className="mt-4">
+                    <Link href="/final-guess">
+                      <Button className="mystical-button w-full">
+                        <CelestialIcon type="eye" size="sm" className="mr-2" />
+                        Make Final Guess
+                      </Button>
+                    </Link>
+                  </div>
+                )}
               </div>
             </Card>
           </div>

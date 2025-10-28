@@ -8,29 +8,78 @@ import { ProgressTracker } from "@/components/progress-tracker"
 import { CelestialIcon } from "@/components/celestial-icon"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Send, Crown, Globe } from "lucide-react"
+import { Send, Crown, Globe, Loader2 } from "lucide-react"
 import Link from "next/link"
+import { useGameState } from "@/components/providers/game-state-provider"
+import { SpotifySearch } from "@/components/spotify-search"
 
 export default function FinalGuessPage() {
-  const [cosmicSong, setCosmicSong] = useState("")
+  const [selectedSong, setSelectedSong] = useState<{ id: string; name: string; artist: string } | null>(null)
   const [showResult, setShowResult] = useState(false)
   const [isCorrect, setIsCorrect] = useState(false)
   const [zodiacTitle, setZodiacTitle] = useState("")
+  const [zodiacDescription, setZodiacDescription] = useState("")
+  const [zodiacImageUrl, setZodiacImageUrl] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const { sessionId, gameSession, refreshGameState } = useGameState()
 
-  const handleSubmit = (e: React.FormEvent) => {
+  console.log('[FinalGuess] Session ID:', sessionId)
+  console.log('[FinalGuess] Game Session:', gameSession)
+  console.log('[FinalGuess] Selected Song:', selectedSong)
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!cosmicSong.trim()) return
-
-    // Simulate answer checking
-    const correct = Math.random() > 0.5 // Random for demo
-    setIsCorrect(correct)
-
-    if (correct) {
-      setZodiacTitle("Celestial Harmonist of the 13th House")
+    if (!selectedSong || !sessionId) {
+      console.log('[FinalGuess] Missing required data:', { selectedSong, sessionId })
+      return
     }
 
-    setShowResult(true)
+    setIsSubmitting(true)
+    console.log('[FinalGuess] Submitting guess:', selectedSong)
+
+    try {
+      const response = await fetch('/api/final-guess', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId,
+          guessedTrackId: selectedSong.id,
+        }),
+      })
+
+      const data = await response.json()
+      console.log('[FinalGuess] Response:', data)
+
+      if (data.correct) {
+        setIsCorrect(true)
+        
+        // Parse Ophiuchus identity
+        let identity = data.ophiuchusIdentity
+        if (typeof identity === 'string') {
+          try {
+            identity = JSON.parse(identity)
+          } catch (e) {
+            console.error('[FinalGuess] Failed to parse identity:', e)
+          }
+        }
+        
+        setZodiacTitle(identity?.title || "Celestial Harmonist of the 13th House")
+        setZodiacDescription(identity?.description || "")
+        setZodiacImageUrl(identity?.imageUrl || "")
+        console.log('[FinalGuess] CORRECT! Ophiuchus Identity:', identity)
+      } else {
+        setIsCorrect(false)
+        console.log('[FinalGuess] Incorrect guess. Attempts:', data.attemptsRemaining)
+      }
+
+      setShowResult(true)
+      await refreshGameState()
+    } catch (error) {
+      console.error('[FinalGuess] Failed to submit guess:', error)
+      alert('Failed to submit your guess. Please try again.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   if (showResult) {
@@ -69,13 +118,32 @@ export default function FinalGuessPage() {
 
                 <div className="bg-black/20 rounded-lg p-6 mb-6 border border-gold-400/30">
                   <h2 className="font-cormorant text-2xl font-bold text-gold-100 mb-3">Your Cosmic Song</h2>
-                  <p className="font-poppins text-lg text-gold-200 italic">"{cosmicSong}"</p>
+                  <p className="font-poppins text-lg text-gold-200 italic">"{selectedSong?.name}" by {selectedSong?.artist}</p>
                 </div>
 
                 <div className="bg-purple-900/20 rounded-lg p-6 border border-purple-400/30">
                   <Crown className="w-8 h-8 mx-auto mb-3 text-purple-300" />
                   <h3 className="font-cinzel text-xl font-bold text-purple-100 mb-2">Your Zodiac Title</h3>
-                  <p className="font-cormorant text-lg text-purple-200">{zodiacTitle}</p>
+                  <p className="font-cormorant text-lg text-purple-200 mb-3">{zodiacTitle}</p>
+                  
+                  {zodiacDescription && (
+                    <div className="mt-4 p-3 bg-black/20 rounded">
+                      <p className="font-poppins text-sm text-purple-300 mb-2">Your Cosmic Description:</p>
+                      <p className="font-poppins text-xs text-purple-200 italic">
+                        {zodiacDescription}
+                      </p>
+                    </div>
+                  )}
+                  
+                  {zodiacImageUrl && (
+                    <div className="mt-4">
+                      <img 
+                        src={zodiacImageUrl} 
+                        alt="Your Ophiuchus Identity"
+                        className="w-full rounded-lg border border-purple-400/30"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div className="mt-8">
@@ -104,14 +172,14 @@ export default function FinalGuessPage() {
                 </div>
 
                 <div className="bg-black/20 rounded-lg p-6 mb-6">
-                  <p className="font-poppins text-gray-300">Your guess: "{cosmicSong}"</p>
+                  <p className="font-poppins text-gray-300">Your guess: "{selectedSong?.name}" by {selectedSong?.artist}</p>
                 </div>
 
                 <div className="space-y-4">
                   <Button
                     onClick={() => {
                       setShowResult(false)
-                      setCosmicSong("")
+                      setSelectedSong(null)
                     }}
                     className="mystical-button w-full"
                   >
@@ -137,7 +205,12 @@ export default function FinalGuessPage() {
   return (
     <div className="min-h-screen relative overflow-hidden cosmic-bg">
       <CosmicBackground />
-      <ProgressTracker completedRooms={["nebula", "cradle", "comet", "aurora", "nova"]} />
+      <ProgressTracker completedRooms={gameSession?.roomClues 
+        ? Object.entries(gameSession.roomClues)
+            .filter(([_, clue]) => clue?.completed)
+            .map(([roomId]) => roomId)
+        : []} 
+      />
 
       {/* Earth from Space Background */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">
@@ -219,21 +292,48 @@ export default function FinalGuessPage() {
               <div className="text-center">
                 <h3 className="font-cormorant text-2xl font-bold text-purple-100 mb-4">What is your Cosmic Song?</h3>
                 <p className="font-poppins text-sm text-purple-300 mb-6">
-                  Speak the title that echoes through the 13th zodiac
+                  Search and select the song that echoes through the 13th zodiac
                 </p>
               </div>
 
-              <Input
-                value={cosmicSong}
-                onChange={(e) => setCosmicSong(e.target.value)}
-                placeholder="Enter the cosmic song title..."
-                className="glassmorphism border-purple-400/30 text-purple-100 placeholder-purple-300/50 text-center text-lg py-4"
+              <SpotifySearch
+                type="track"
+                onSelect={(track: any) => {
+                  console.log('[FinalGuess] Song selected:', track)
+                  setSelectedSong({
+                    id: track.id,
+                    name: track.name,
+                    artist: track.artist,
+                  })
+                }}
+                placeholder="Search for your cosmic song..."
               />
 
-              <Button type="submit" className="mystical-button w-full text-lg py-4">
-                <Send className="w-5 h-5 mr-3" />
-                Reveal the Cosmic Truth
-                <CelestialIcon type="mystical" size="sm" className="ml-3" />
+              {selectedSong && (
+                <div className="bg-purple-900/20 rounded-lg p-4 border border-purple-400/30">
+                  <p className="font-poppins text-sm text-purple-200 text-center">
+                    Selected: <span className="font-bold text-gold-200">{selectedSong.name}</span> by {selectedSong.artist}
+                  </p>
+                </div>
+              )}
+
+              <Button 
+                type="submit" 
+                className="mystical-button w-full text-lg py-4"
+                disabled={!selectedSong || isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-3 animate-spin" />
+                    Revealing...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-5 h-5 mr-3" />
+                    Reveal the Cosmic Truth
+                    <CelestialIcon type="mystical" size="sm" className="ml-3" />
+                  </>
+                )}
               </Button>
             </form>
           </Card>
