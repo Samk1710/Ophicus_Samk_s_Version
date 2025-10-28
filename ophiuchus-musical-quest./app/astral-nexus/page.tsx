@@ -1,12 +1,14 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useSession } from "next-auth/react"
 import { CosmicBackground } from "@/components/cosmic-background"
 import { ProgressTracker } from "@/components/progress-tracker"
 import { CelestialIcon } from "@/components/celestial-icon"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Globe, Flame, Rainbow, Star, Loader2 } from "lucide-react"
+import { BigBangPopup } from "@/components/big-bang-popup"
+import { Globe, Flame, Rainbow, Star, Loader2, Crown, Music } from "lucide-react"
 import Link from "next/link"
 import { useGameState } from "@/components/providers/game-state-provider"
 import { useRouter } from "next/navigation"
@@ -66,7 +68,10 @@ const planets = [
 
 export default function AstralNexus() {
   const [hoveredPlanet, setHoveredPlanet] = useState<string | null>(null)
-  const { sessionId, gameSession, refreshGameState } = useGameState()
+  const [showBigBangPopup, setShowBigBangPopup] = useState(false)
+  const [isBigBangLoading, setIsBigBangLoading] = useState(false)
+  const { data: session } = useSession()
+  const { sessionId, gameSession, initializeBigBang, refreshGameState } = useGameState()
   const router = useRouter()
 
   // Refresh game state when component mounts
@@ -82,6 +87,26 @@ export default function AstralNexus() {
     console.log('[AstralNexus] Game session updated:', gameSession)
   }, [gameSession])
 
+  // Handle Big Bang initialization
+  const handleBeginJourney = async () => {
+    console.log('[AstralNexus] Begin Journey button clicked')
+    setIsBigBangLoading(true)
+    
+    try {
+      const newSessionId = await initializeBigBang()
+      console.log('[AstralNexus] Big Bang initialized, session:', newSessionId)
+      
+      // Close popup and refresh game state
+      setShowBigBangPopup(false)
+      await refreshGameState()
+    } catch (error) {
+      console.error('[AstralNexus] Failed to initialize Big Bang:', error)
+      alert('Failed to start cosmic journey. Please try again.')
+    } finally {
+      setIsBigBangLoading(false)
+    }
+  }
+
   // Get completed rooms from game session
   const completedRooms = gameSession?.roomClues
     ? Object.entries(gameSession.roomClues)
@@ -91,36 +116,96 @@ export default function AstralNexus() {
 
   console.log('[AstralNexus] Completed rooms:', completedRooms)
 
-  // If no session, redirect to home
-  if (!sessionId && typeof window !== 'undefined') {
-    console.log('[AstralNexus] No session ID, redirecting to home')
-    router.push('/home')
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-gold-400" />
-      </div>
-    )
-  }
-
   return (
     <div className="min-h-screen relative overflow-hidden cosmic-bg">
       <CosmicBackground />
       <ProgressTracker completedRooms={completedRooms} />
 
+      {/* Big Bang Popup */}
+      <BigBangPopup isOpen={showBigBangPopup} onClose={() => setShowBigBangPopup(false)} />
+
       {/* Main Content */}
       <div className="relative z-10 flex-1 flex items-center justify-center px-6 py-12">
-        <div className="max-w-6xl mx-auto">
-          {/* Central Hub Description */}
-          <div className="text-center mb-16">
+        <div className="max-w-6xl mx-auto">{/* Central Hub Description */}
+          <div className="text-center mb-12">
             <div className="flex items-center justify-center mb-6">
               <CelestialIcon type="eye" size="xl" className="text-gold-400 mr-4" />
               <h1 className="font-cinzel text-4xl md:text-5xl font-bold glow-text text-gold-100">Astral Nexus</h1>
               <CelestialIcon type="mystical" size="xl" className="text-gold-400 ml-4" />
             </div>
-            <p className="font-poppins text-lg text-purple-200 max-w-2xl mx-auto">
+            <p className="font-poppins text-lg text-purple-200 max-w-2xl mx-auto mb-8">
               Five celestial chambers await your exploration. Each holds a piece of the cosmic puzzle that will reveal
               your destined song among the stars.
             </p>
+
+            {/* Quest Status Card */}
+            {!session ? (
+              <Card className="glassmorphism border-purple-400/30 p-6 max-w-md mx-auto">
+                <div className="text-center">
+                  <CelestialIcon type="eye" size="lg" className="text-purple-400 mx-auto mb-4" />
+                  <h3 className="font-cinzel text-xl font-bold text-purple-100 mb-2">Connect to Begin</h3>
+                  <p className="font-poppins text-purple-200 text-sm mb-4">
+                    Connect your Spotify account to unlock your cosmic realm
+                  </p>
+                  <Button onClick={() => router.push('/login')} className="mystical-button w-full">
+                    <Music className="w-5 h-5 mr-3" />
+                    Connect Spotify
+                    <CelestialIcon type="mystical" size="sm" className="ml-3" />
+                  </Button>
+                </div>
+              </Card>
+            ) : !sessionId ? (
+              <Card className="glassmorphism border-purple-400/30 p-6 max-w-md mx-auto">
+                <div className="text-center">
+                  <CelestialIcon type="eye" size="lg" className="text-purple-400 mx-auto mb-4" />
+                  <h3 className="font-cinzel text-xl font-bold text-purple-100 mb-2">Ready for Your Quest?</h3>
+                  <p className="font-poppins text-purple-200 text-sm mb-4">
+                    Discover your cosmic song through the celestial chambers
+                  </p>
+                  <Button 
+                    onClick={() => setShowBigBangPopup(true)} 
+                    className="mystical-button w-full"
+                    disabled={isBigBangLoading}
+                  >
+                    {isBigBangLoading ? (
+                      <>
+                        <Loader2 className="w-5 h-5 mr-3 animate-spin" />
+                        Initializing...
+                      </>
+                    ) : (
+                      <>
+                        <Crown className="w-5 h-5 mr-3" />
+                        Begin Cosmic Journey
+                        <CelestialIcon type="mystical" size="sm" className="ml-3" />
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </Card>
+            ) : (
+              <Card className="glassmorphism border-gold-400/30 p-6 max-w-md mx-auto">
+                <div className="text-center">
+                  <CelestialIcon type="sun" size="lg" className="text-gold-400 mx-auto mb-4" />
+                  <h3 className="font-cinzel text-xl font-bold text-gold-100 mb-2">Journey in Progress</h3>
+                  <p className="font-poppins text-purple-200 text-sm mb-4">
+                    Continue exploring the chambers or start a new quest
+                  </p>
+                  <div className="space-y-3">
+                    <div className="font-poppins text-sm text-purple-300">
+                      Chambers Explored: {completedRooms.length} / 5
+                    </div>
+                    <Button 
+                      onClick={() => setShowBigBangPopup(true)} 
+                      variant="outline"
+                      className="border-purple-400/30 text-purple-200 hover:bg-purple-500/10 w-full bg-transparent"
+                    >
+                      <Music className="w-5 h-5 mr-3" />
+                      Start New Quest
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            )}
           </div>
 
           {/* Planet Grid - Centered */}

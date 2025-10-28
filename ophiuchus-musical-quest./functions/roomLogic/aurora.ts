@@ -52,15 +52,10 @@ Write ONLY the monologue, nothing else. Make it emotional and authentic.`;
   console.log('[generateAuroraEmotionalSituation] Preview:', audioText.substring(0, 100) + '...');
 
   // Generate audio using TTS with appropriate emotional voice
-  const characters = [
-    { name: "Person", voice: "Charon" }  // Emotional, expressive voice
-  ];
-
-  const audioId = await generateAudio(audioText.trim(), characters);
-  console.log('[generateAuroraEmotionalSituation] Audio generated, URL:', audioId);
-
-  // audioId is now the public URL path like /audio/audio-uuid.wav
-  const audioUrl = audioId;
+  // Available voices: Puck, Charon, Kore, Fenrir, Aoede
+  // Charon is warm and expressive - perfect for emotional scenarios
+  const audioUrl = await generateAudio(audioText.trim(), 'Charon');
+  console.log('[generateAuroraEmotionalSituation] Audio generated, URL:', audioUrl);
 
   return {
     situation,

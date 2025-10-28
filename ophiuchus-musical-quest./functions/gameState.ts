@@ -75,9 +75,10 @@ export async function updateRoomCompletion(
 
 export async function submitFinalGuess(
   sessionId: string,
-  guessedSong: string
+  guessedTrackId: string
 ): Promise<{ correct: boolean; session: IGameSession | null }> {
   console.log('[submitFinalGuess] Processing final guess for session:', sessionId);
+  console.log('[submitFinalGuess] Guessed Track ID:', guessedTrackId);
   await connectDB();
 
   const session = await GameSession.findById(sessionId);
@@ -86,17 +87,23 @@ export async function submitFinalGuess(
     return { correct: false, session: null };
   }
 
-  console.log('[submitFinalGuess] Comparing guess:', guessedSong, 'with cosmic song:', session.cosmicSong.name);
+  console.log('[submitFinalGuess] Cosmic Song ID:', session.cosmicSong.id);
+  console.log('[submitFinalGuess] Cosmic Song Name:', session.cosmicSong.name);
+  console.log('[submitFinalGuess] Comparing:', { guessedTrackId, correctId: session.cosmicSong.id });
   
-  const correct = normalizeString(guessedSong) === normalizeString(session.cosmicSong.name);
+  // Compare track IDs directly
+  const correct = guessedTrackId === session.cosmicSong.id;
   
   session.finalGuesses += 1;
   
   if (correct) {
     session.completed = true;
-    console.log('[submitFinalGuess] Correct guess! Game completed');
+    console.log('[submitFinalGuess] ✅ CORRECT! Track IDs match:', guessedTrackId);
   } else {
-    console.log('[submitFinalGuess] Incorrect guess. Attempts:', session.finalGuesses);
+    console.log('[submitFinalGuess] ❌ INCORRECT! IDs do not match');
+    console.log('[submitFinalGuess] Expected:', session.cosmicSong.id);
+    console.log('[submitFinalGuess] Got:', guessedTrackId);
+    console.log('[submitFinalGuess] Attempts:', session.finalGuesses);
   }
 
   await session.save();

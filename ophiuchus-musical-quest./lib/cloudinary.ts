@@ -103,6 +103,62 @@ export const deleteImageFromCloudinary = async (publicId: string): Promise<boole
 };
 
 /**
+ * Upload an audio file from Buffer to Cloudinary
+ * @param buffer - The audio data as Buffer
+ * @param fileName - Optional filename for the upload
+ * @param folder - Optional folder path in Cloudinary
+ * @returns Promise with upload result
+ */
+export const uploadAudioFromBuffer = async (
+  buffer: Buffer,
+  fileName?: string,
+  folder: string = 'ophiuchus-quest/audio'
+): Promise<CloudinaryUploadResult> => {
+  try {
+    console.log('Uploading audio to Cloudinary...');
+    console.log('Buffer size:', buffer.length, 'bytes');
+    console.log('Folder:', folder);
+    console.log('File name:', fileName);
+    
+    // Use upload_stream for buffer uploads to avoid signature issues
+    const uploadResult = await new Promise<CloudinaryUploadResult>((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: folder,
+          public_id: fileName,
+          resource_type: 'raw',
+          // Don't specify format for raw uploads
+        },
+        (error: any, result: any) => {
+          if (error) {
+            console.error('Cloudinary audio upload error:', error);
+            reject(new Error(`Failed to upload audio: ${error.message}`));
+          } else if (result) {
+            console.log('Audio uploaded successfully:', result.secure_url);
+            resolve({
+              url: result.secure_url,
+              publicId: result.public_id,
+              secureUrl: result.secure_url
+            });
+          } else {
+            reject(new Error('No result from Cloudinary audio upload'));
+          }
+        }
+      );
+      
+      // Write buffer to stream
+      uploadStream.end(buffer);
+    });
+    
+    return uploadResult;
+    
+  } catch (error) {
+    console.error('Error uploading audio to Cloudinary:', error);
+    throw error;
+  }
+};
+
+/**
  * Upload an audio file from ArrayBuffer to Cloudinary
  * @param arrayBuffer - The audio data as ArrayBuffer
  * @param fileName - Optional filename for the upload

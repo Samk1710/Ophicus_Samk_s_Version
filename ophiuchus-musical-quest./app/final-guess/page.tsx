@@ -2,30 +2,91 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { CosmicBackground } from "@/components/cosmic-background"
 import { ProgressTracker } from "@/components/progress-tracker"
 import { CelestialIcon } from "@/components/celestial-icon"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Send, Crown, Globe, Loader2 } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { Send, Crown, Globe, Loader2, PartyPopper, XCircle, Sparkles } from "lucide-react"
 import Link from "next/link"
 import { useGameState } from "@/components/providers/game-state-provider"
 import { SpotifySearch } from "@/components/spotify-search"
+import confetti from "canvas-confetti"
 
 export default function FinalGuessPage() {
   const [selectedSong, setSelectedSong] = useState<{ id: string; name: string; artist: string } | null>(null)
-  const [showResult, setShowResult] = useState(false)
-  const [isCorrect, setIsCorrect] = useState(false)
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false)
+  const [showFailureDialog, setShowFailureDialog] = useState(false)
   const [zodiacTitle, setZodiacTitle] = useState("")
   const [zodiacDescription, setZodiacDescription] = useState("")
   const [zodiacImageUrl, setZodiacImageUrl] = useState("")
+  const [attemptsRemaining, setAttemptsRemaining] = useState(2)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { sessionId, gameSession, refreshGameState } = useGameState()
 
   console.log('[FinalGuess] Session ID:', sessionId)
   console.log('[FinalGuess] Game Session:', gameSession)
   console.log('[FinalGuess] Selected Song:', selectedSong)
+
+  // Epic confetti celebration for final success
+  const celebrateVictory = () => {
+    const duration = 5000 // 5 seconds of confetti!
+    const animationEnd = Date.now() + duration
+    const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 9999 }
+
+    function randomInRange(min: number, max: number) {
+      return Math.random() * (max - min) + min
+    }
+
+    const interval: NodeJS.Timeout = setInterval(function() {
+      const timeLeft = animationEnd - Date.now()
+
+      if (timeLeft <= 0) {
+        return clearInterval(interval)
+      }
+
+      const particleCount = 100 * (timeLeft / duration)
+      
+      // Shoot confetti from both sides
+      confetti({
+        ...defaults,
+        particleCount,
+        origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
+        colors: ['#FFD700', '#FFA500', '#FF6347', '#9370DB', '#00CED1']
+      })
+      confetti({
+        ...defaults,
+        particleCount,
+        origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
+        colors: ['#FFD700', '#FFA500', '#FF6347', '#9370DB', '#00CED1']
+      })
+    }, 250)
+
+    // Extra burst at the center
+    setTimeout(() => {
+      confetti({
+        particleCount: 200,
+        spread: 180,
+        origin: { y: 0.6 },
+        colors: ['#FFD700', '#FFA500', '#FF6347', '#9370DB', '#00CED1']
+      })
+    }, 500)
+  }
+
+  useEffect(() => {
+    if (showSuccessDialog) {
+      celebrateVictory()
+    }
+  }, [showSuccessDialog])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -51,8 +112,6 @@ export default function FinalGuessPage() {
       console.log('[FinalGuess] Response:', data)
 
       if (data.correct) {
-        setIsCorrect(true)
-        
         // Parse Ophiuchus identity
         let identity = data.ophiuchusIdentity
         if (typeof identity === 'string') {
@@ -67,12 +126,15 @@ export default function FinalGuessPage() {
         setZodiacDescription(identity?.description || "")
         setZodiacImageUrl(identity?.imageUrl || "")
         console.log('[FinalGuess] CORRECT! Ophiuchus Identity:', identity)
+        
+        setShowSuccessDialog(true)
       } else {
-        setIsCorrect(false)
-        console.log('[FinalGuess] Incorrect guess. Attempts:', data.attemptsRemaining)
+        setAttemptsRemaining(data.attemptsRemaining || 0)
+        console.log('[FinalGuess] Incorrect guess. Attempts remaining:', data.attemptsRemaining)
+        
+        setShowFailureDialog(true)
       }
 
-      setShowResult(true)
       await refreshGameState()
     } catch (error) {
       console.error('[FinalGuess] Failed to submit guess:', error)
@@ -80,126 +142,6 @@ export default function FinalGuessPage() {
     } finally {
       setIsSubmitting(false)
     }
-  }
-
-  if (showResult) {
-    return (
-      <div className="min-h-screen relative overflow-hidden cosmic-bg">
-        <CosmicBackground />
-
-        {/* Earth from Space Background */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">
-          <Globe className="w-96 h-96 text-blue-400 animate-spin" style={{ animationDuration: "60s" }} />
-        </div>
-
-        {isCorrect ? (
-          // Success - Ascension
-          <div className="relative z-10 flex items-center justify-center min-h-screen px-6">
-            <div className="max-w-2xl mx-auto text-center">
-              {/* Ascension Animation */}
-              <div className="mb-8">
-                <div className="w-32 h-32 mx-auto mb-6 rounded-full bg-gradient-to-br from-gold-400/30 to-yellow-600/30 flex items-center justify-center pulse-glow animate-bounce">
-                  <Crown className="w-16 h-16 text-gold-300" />
-                </div>
-                <div className="space-y-2">
-                  {[...Array(5)].map((_, i) => (
-                    <div
-                      key={i}
-                      className="h-px bg-gradient-to-r from-transparent via-gold-400 to-transparent animate-pulse"
-                      style={{ animationDelay: `${i * 0.2}s` }}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              <Card className="glassmorphism border-gold-400/50 p-8">
-                <h1 className="font-cinzel text-4xl font-bold glow-text mb-4 text-gold-100">ASCENSION</h1>
-                <p className="font-poppins text-xl text-gold-200 mb-6">You have unlocked the cosmic truth!</p>
-
-                <div className="bg-black/20 rounded-lg p-6 mb-6 border border-gold-400/30">
-                  <h2 className="font-cormorant text-2xl font-bold text-gold-100 mb-3">Your Cosmic Song</h2>
-                  <p className="font-poppins text-lg text-gold-200 italic">"{selectedSong?.name}" by {selectedSong?.artist}</p>
-                </div>
-
-                <div className="bg-purple-900/20 rounded-lg p-6 border border-purple-400/30">
-                  <Crown className="w-8 h-8 mx-auto mb-3 text-purple-300" />
-                  <h3 className="font-cinzel text-xl font-bold text-purple-100 mb-2">Your Zodiac Title</h3>
-                  <p className="font-cormorant text-lg text-purple-200 mb-3">{zodiacTitle}</p>
-                  
-                  {zodiacDescription && (
-                    <div className="mt-4 p-3 bg-black/20 rounded">
-                      <p className="font-poppins text-sm text-purple-300 mb-2">Your Cosmic Description:</p>
-                      <p className="font-poppins text-xs text-purple-200 italic">
-                        {zodiacDescription}
-                      </p>
-                    </div>
-                  )}
-                  
-                  {zodiacImageUrl && (
-                    <div className="mt-4">
-                      <img 
-                        src={zodiacImageUrl} 
-                        alt="Your Ophiuchus Identity"
-                        className="w-full rounded-lg border border-purple-400/30"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                <div className="mt-8">
-                  <Button className="mystical-button">
-                    <CelestialIcon type="mystical" size="sm" className="mr-2" />
-                    Share Your Cosmic Journey
-                  </Button>
-                </div>
-              </Card>
-            </div>
-          </div>
-        ) : (
-          // Failure - Cosmic Fog
-          <div className="relative z-10 flex items-center justify-center min-h-screen px-6">
-            <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" />
-            <div className="relative max-w-2xl mx-auto text-center">
-              <Card className="glassmorphism border-gray-400/50 p-8">
-                <div className="mb-6">
-                  <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-gray-500/30 to-gray-700/30 flex items-center justify-center">
-                    <CelestialIcon type="moon" size="xl" className="text-gray-400" />
-                  </div>
-                  <h1 className="font-cinzel text-3xl font-bold text-gray-100 mb-4">The Cosmic Fog Descends</h1>
-                  <p className="font-poppins text-gray-200 mb-6">
-                    The stars have not aligned. The cosmic song remains hidden in the void.
-                  </p>
-                </div>
-
-                <div className="bg-black/20 rounded-lg p-6 mb-6">
-                  <p className="font-poppins text-gray-300">Your guess: "{selectedSong?.name}" by {selectedSong?.artist}</p>
-                </div>
-
-                <div className="space-y-4">
-                  <Button
-                    onClick={() => {
-                      setShowResult(false)
-                      setSelectedSong(null)
-                    }}
-                    className="mystical-button w-full"
-                  >
-                    Try Again
-                  </Button>
-                  <Link href="/astral-nexus">
-                    <Button
-                      variant="outline"
-                      className="border-gray-400/30 text-gray-200 hover:bg-gray-500/10 w-full bg-transparent"
-                    >
-                      Return to Nexus
-                    </Button>
-                  </Link>
-                </div>
-              </Card>
-            </div>
-          </div>
-        )}
-      </div>
-    )
   }
 
   return (
@@ -211,6 +153,120 @@ export default function FinalGuessPage() {
             .map(([roomId]) => roomId)
         : []} 
       />
+
+      {/* Success Dialog - Epic Victory */}
+      <AlertDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+        <AlertDialogContent className="glassmorphism border-gold-400/50 max-w-2xl">
+          <AlertDialogHeader>
+            <div className="flex justify-center mb-4">
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-gold-400/30 to-yellow-600/30 flex items-center justify-center pulse-glow">
+                <Crown className="w-12 h-12 text-gold-300" />
+              </div>
+            </div>
+            <AlertDialogTitle className="font-cinzel text-3xl font-bold text-center glow-text text-gold-100">
+              🎊 COSMIC ASCENSION! 🎊
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center space-y-4">
+              <p className="font-poppins text-lg text-gold-200">
+                You have unlocked the ultimate cosmic truth!
+              </p>
+              
+              <div className="bg-black/30 rounded-lg p-4 border border-gold-400/30">
+                <p className="font-cormorant text-xl font-bold text-gold-100 mb-2">Your Cosmic Song</p>
+                <p className="font-poppins text-gold-200 italic">
+                  "{selectedSong?.name}" by {selectedSong?.artist}
+                </p>
+              </div>
+
+              <div className="bg-purple-900/30 rounded-lg p-4 border border-purple-400/30">
+                <div className="flex justify-center mb-2">
+                  <Sparkles className="w-6 h-6 text-purple-300" />
+                </div>
+                <p className="font-cinzel text-lg font-bold text-purple-100 mb-2">{zodiacTitle}</p>
+                {zodiacDescription && (
+                  <p className="font-poppins text-sm text-purple-300 italic">
+                    {zodiacDescription}
+                  </p>
+                )}
+              </div>
+
+              {zodiacImageUrl && (
+                <div className="mt-4">
+                  <img 
+                    src={zodiacImageUrl} 
+                    alt="Your Ophiuchus Identity"
+                    className="w-full rounded-lg border border-gold-400/30"
+                  />
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              onClick={() => setShowSuccessDialog(false)}
+              className="mystical-button w-full"
+            >
+              <PartyPopper className="w-5 h-5 mr-2" />
+              Share Your Journey
+            </Button>
+            <Link href="/astral-nexus" className="w-full">
+              <Button
+                variant="outline"
+                className="border-gold-400/30 text-gold-200 hover:bg-gold-500/10 w-full bg-transparent"
+              >
+                Return to Nexus
+              </Button>
+            </Link>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Failure Dialog */}
+      <AlertDialog open={showFailureDialog} onOpenChange={setShowFailureDialog}>
+        <AlertDialogContent className="glassmorphism border-purple-400/50">
+          <AlertDialogHeader>
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-red-500/30 to-orange-600/30 flex items-center justify-center">
+                <XCircle className="w-10 h-10 text-red-400" />
+              </div>
+            </div>
+            <AlertDialogTitle className="font-cinzel text-2xl font-bold text-center text-purple-100">
+              The Stars Have Not Aligned
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center space-y-3">
+              <p className="font-poppins text-purple-200">
+                Your guess: <span className="font-bold text-purple-100">"{selectedSong?.name}"</span> by {selectedSong?.artist}
+              </p>
+              <p className="font-poppins text-purple-300">
+                {attemptsRemaining > 0 ? (
+                  <>You have <span className="font-bold text-yellow-300">{attemptsRemaining}</span> {attemptsRemaining === 1 ? 'attempt' : 'attempts'} remaining.</>
+                ) : (
+                  <span className="text-red-400 font-bold">All attempts exhausted. The cosmic song remains hidden.</span>
+                )}
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            {attemptsRemaining > 0 ? (
+              <Button
+                onClick={() => {
+                  setShowFailureDialog(false)
+                  setSelectedSong(null)
+                }}
+                className="mystical-button w-full"
+              >
+                Try Again
+              </Button>
+            ) : (
+              <Link href="/astral-nexus" className="w-full">
+                <Button className="mystical-button w-full">
+                  Return to Nexus
+                </Button>
+              </Link>
+            )}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Earth from Space Background */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">

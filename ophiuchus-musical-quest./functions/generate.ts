@@ -2,6 +2,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { GoogleGenAI, Modality } from "@google/genai";
 import wav from 'wav';
 import path from 'path';
+import { uploadAudioFromBuffer } from '@/lib/cloudinary';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyANqqfDccgTgAR0YEEKuT9LVELZ5eF10Tc';
 
@@ -117,22 +118,15 @@ async function saveWaveFile(
    });
 }
 
-export async function generateAudio(prompt: string, characters: { name: string, voice: string }[]): Promise<string> {
+export async function generateAudio(prompt: string, voiceName: string = 'Charon'): Promise<string> {
    console.log('[generateAudio] Starting audio generation...');
    console.log('[generateAudio] Prompt length:', prompt.length);
-   console.log('[generateAudio] Characters:', characters);
+   console.log('[generateAudio] Voice:', voiceName);
    
    const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
-  
-   const speakerVoiceConfigs = characters.map((character) => ({
-      speaker: character.name,
-      voiceConfig: {
-         prebuiltVoiceConfig: { voiceName: character.voice }
-      }
-   }));
 
    try {
-      console.log('[generateAudio] Calling Gemini TTS API...');
+      console.log('[generateAudio] Calling Gemini TTS API with single voice...');
       const response = await ai.models.generateContent({
          model: "gemini-2.5-flash-preview-tts",
          // @ts-ignore
@@ -140,8 +134,8 @@ export async function generateAudio(prompt: string, characters: { name: string, 
          config: {
                responseModalities: ['AUDIO'],
                speechConfig: {
-                  multiSpeakerVoiceConfig: {
-                     speakerVoiceConfigs: speakerVoiceConfigs,
+                  voiceConfig: {
+                     prebuiltVoiceConfig: { voiceName: voiceName }
                   }
                }
          }
@@ -157,30 +151,26 @@ export async function generateAudio(prompt: string, characters: { name: string, 
       console.log('[generateAudio] Audio data received, size:', Buffer.from(data, 'base64').length, 'bytes');
       const audioBuffer = Buffer.from(data, 'base64');
 
+      // Convert buffer to WAV format
       const id = crypto.randomUUID();
-      const fileName = `audio-${id}.wav`;
+      const fileName = `aurora-${id}`;
       
-      // Ensure the public/audio directory exists
-      const audioDir = path.join(process.cwd(), "public", "audio");
-      const fs = await import('fs');
-      if (!fs.existsSync(audioDir)) {
-         console.log('[generateAudio] Creating audio directory:', audioDir);
-         fs.mkdirSync(audioDir, { recursive: true });
-      }
+      console.log('[generateAudio] Converting to WAV and uploading to Cloudinary...');
       
-      // Save to public/audio directory so it can be served by Next.js
-      const publicPath = path.join(audioDir, fileName);
-      console.log('[generateAudio] Saving audio file to:', publicPath);
+      // Create a temporary WAV file buffer
+      const wavBuffer = await createWavBuffer(audioBuffer);
       
-      await saveWaveFile(publicPath, audioBuffer);
+      // Upload to Cloudinary
+      const uploadResult = await uploadAudioFromBuffer(
+         wavBuffer,
+         fileName,
+         'ophiuchus-quest/audio'
+      );
       
-      console.log('[generateAudio] Audio file saved successfully');
+      console.log('[generateAudio] Audio uploaded successfully to Cloudinary:', uploadResult.secureUrl);
       
-      // Return the public URL path
-      const publicUrl = `/audio/${fileName}`;
-      console.log('[generateAudio] Public URL:', publicUrl);
-      
-      return publicUrl;
+      // Return the Cloudinary URL
+      return uploadResult.secureUrl;
    } catch (error) {
       console.error('[generateAudio] Error generating audio:', error);
       if (error instanceof Error) {
@@ -189,6 +179,24 @@ export async function generateAudio(prompt: string, characters: { name: string, 
       }
       throw error;
    }
+}
+
+async function createWavBuffer(pcmData: Buffer, channels = 1, rate = 24000, sampleWidth = 2): Promise<Buffer> {
+   return new Promise((resolve, reject) => {
+      const chunks: Buffer[] = [];
+      const writer = new wav.Writer({
+         channels,
+         sampleRate: rate,
+         bitDepth: sampleWidth * 8,
+      });
+
+      writer.on('data', (chunk: Buffer) => chunks.push(chunk));
+      writer.on('finish', () => resolve(Buffer.concat(chunks)));
+      writer.on('error', reject);
+
+      writer.write(pcmData);
+      writer.end();
+   });
 }
 
 // console.log(await generate("Hello, how are you?"))

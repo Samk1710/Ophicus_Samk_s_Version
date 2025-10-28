@@ -10,7 +10,7 @@ import { CosmicConfetti, celebrateCorrectAnswer } from "@/components/cosmic-conf
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Send, MessageCircle, Globe, Loader2, CheckCircle } from "lucide-react"
+import { Send, MessageCircle, Globe, Loader2, CheckCircle, XCircle } from "lucide-react"
 import { useGameState } from "@/components/providers/game-state-provider"
 import { SpotifySearch } from "@/components/spotify-search"
 import { useRouter } from "next/navigation"
@@ -42,6 +42,7 @@ export default function CradleRoom() {
   const [isCompleted, setIsCompleted] = useState(false)
   const [clueText, setClueText] = useState("")
   const [showSuccessDialog, setShowSuccessDialog] = useState(false)
+  const [showFailureDialog, setShowFailureDialog] = useState(false)
   const [earnedPoints, setEarnedPoints] = useState(0)
   const { sessionId, gameSession, refreshGameState } = useGameState()
   const router = useRouter()
@@ -184,12 +185,14 @@ export default function CradleRoom() {
         setMessages(prev => [...prev, {
           id: prev.length + 1,
           type: "system",
-          content: `✨ Correct! The artist is ${data.correctArtist?.name}. You earned ${data.points} points! ${data.clue}`,
+          content: `✨ Correct! The artist is ${data.correctArtist?.name}. You earned ${data.points} points!`,
           timestamp: new Date()
         }])
         await refreshGameState()
       } else {
         setAttemptsRemaining(data.attemptsRemaining || 0)
+        setShowFailureDialog(true)
+        
         setMessages(prev => [...prev, {
           id: prev.length + 1,
           type: "system",
@@ -422,6 +425,38 @@ export default function CradleRoom() {
                 className="mystical-button w-full mt-4"
               >
                 Continue Journey
+              </Button>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Failure Dialog */}
+      <AlertDialog open={showFailureDialog} onOpenChange={setShowFailureDialog}>
+        <AlertDialogContent className="glassmorphism border-yellow-400/50">
+          <AlertDialogHeader>
+            <div className="flex justify-center mb-4">
+              <XCircle className="w-16 h-16 text-yellow-400" />
+            </div>
+            <AlertDialogTitle className="text-center text-2xl font-cinzel text-yellow-100">
+              Not Quite Right
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center space-y-4">
+              <p className="text-yellow-200 font-poppins">
+                {attemptsRemaining > 0 
+                  ? `That's not the correct artist. You have ${attemptsRemaining} attempt${attemptsRemaining !== 1 ? 's' : ''} remaining.`
+                  : "You've used all your attempts, but the journey continues through other chambers."}
+              </p>
+              <Button 
+                onClick={() => {
+                  setShowFailureDialog(false)
+                  if (attemptsRemaining === 0) {
+                    router.push('/astral-nexus')
+                  }
+                }}
+                className="mystical-button w-full mt-4"
+              >
+                {attemptsRemaining > 0 ? 'Try Again' : 'Continue Journey'}
               </Button>
             </AlertDialogDescription>
           </AlertDialogHeader>

@@ -1,43 +1,30 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect } from "react"
 import { useSession } from "next-auth/react"
 import { CosmicBackground } from "@/components/cosmic-background"
 import { CelestialIcon } from "@/components/celestial-icon"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { BigBangPopup } from "@/components/big-bang-popup"
 import { SpotifyProgressBar } from "@/components/spotify-progress-bar"
 import { SkeletonStatsCard, SkeletonCurrentTrack, SkeletonRecentTracks } from "@/components/skeleton-components"
-import { ListeningGraph } from "@/components/listening-graph"
 import { TopSongCard } from "@/components/top-song-card"
 import { TopArtistCard } from "@/components/top-artist-card"
 import { TopArtistsCard } from "@/components/top-artists-card"
 import { useSpotifyUserData } from "@/hooks/useSpotifyUserData"
-import { useSpotifyControls } from "@/hooks/useSpotifyControls"
-import { useGameState } from "@/components/providers/game-state-provider"
 import { useRouter } from "next/navigation"
 import {
-  Play,
-  SkipForward,
-  Heart,
-  Shuffle,
   Music,
-  Clock,
   TrendingUp,
   Headphones,
   Zap,
-  Crown,
   Globe,
-  Loader2,
+  Sparkles,
 } from "lucide-react"
 
 export default function HomePage() {
-  const [showBigBangPopup, setShowBigBangPopup] = useState(false)
-  const [isBigBangLoading, setIsBigBangLoading] = useState(false)
   const { data: session } = useSession()
   const { userData, loading, error } = useSpotifyUserData()
-  const { sessionId, gameSession, initializeBigBang, refreshGameState } = useGameState()
   const router = useRouter()
 
   // Auto-refresh data every 30 seconds when a track is playing
@@ -52,26 +39,6 @@ export default function HomePage() {
     }
   }, [userData?.currentTrack?.is_playing]);
 
-  // Handle Big Bang initialization
-  const handleBeginJourney = async () => {
-    console.log('[HomePage] Begin Journey button clicked')
-    setIsBigBangLoading(true)
-    
-    try {
-      const newSessionId = await initializeBigBang()
-      console.log('[HomePage] Big Bang initialized, session:', newSessionId)
-      
-      // Close popup and navigate to Astral Nexus
-      setShowBigBangPopup(false)
-      router.push('/astral-nexus')
-    } catch (error) {
-      console.error('[HomePage] Failed to initialize Big Bang:', error)
-      alert('Failed to start cosmic journey. Please try again.')
-    } finally {
-      setIsBigBangLoading(false)
-    }
-  }
-
   return (
     <div className="min-h-screen relative overflow-hidden">
       <CosmicBackground />
@@ -80,9 +47,6 @@ export default function HomePage() {
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">
         <Globe className="w-96 h-96 text-blue-400 animate-spin" style={{ animationDuration: "60s" }} />
       </div>
-
-      {/* Big Bang Popup */}
-      <BigBangPopup isOpen={showBigBangPopup} onClose={() => setShowBigBangPopup(false)} />
 
       {/* Main Content */}
       <div className="relative z-10 px-6 py-12">
@@ -115,67 +79,28 @@ export default function HomePage() {
             )}
           </div>
 
-          {/* Begin Your Realm CTA */}
+          {/* Quest CTA */}
           <div className="flex justify-center mb-12">
             <Card className="glassmorphism border-purple-400/30 p-8 max-w-md">
               <div className="mb-6">
                 <CelestialIcon type="eye" size="xl" className="text-purple-400 mx-auto mb-4" />
-                <h3 className="font-cinzel text-2xl font-bold text-purple-100 mb-2">Ready for Your Quest?</h3>
+                <h3 className="font-cinzel text-2xl font-bold text-purple-100 mb-2">Embark on Your Quest</h3>
                 <p className="font-poppins text-purple-200 text-sm">
-                  {session && userData ? 
-                    gameSession ? "Continue your cosmic journey through the celestial chambers" :
+                  {session ? 
                     "Discover your cosmic song through the celestial chambers" :
-                    session ? "Loading your cosmic data..." :
                     "Connect your Spotify to unlock your cosmic realm"
                   }
                 </p>
               </div>
 
-              {session && userData ? (
-                gameSession ? (
-                  <div className="space-y-3">
-                    <Button onClick={() => router.push('/astral-nexus')} className="mystical-button w-full">
-                      <Crown className="w-5 h-5 mr-3" />
-                      Continue Journey
-                      <CelestialIcon type="mystical" size="sm" className="ml-3" />
-                    </Button>
-                    <Button 
-                      onClick={() => setShowBigBangPopup(true)} 
-                      variant="outline"
-                      className="border-purple-400/30 text-purple-200 hover:bg-purple-500/10 w-full bg-transparent"
-                    >
-                      <Music className="w-5 h-5 mr-3" />
-                      Start New Quest
-                    </Button>
-                  </div>
-                ) : (
-                  <Button 
-                    onClick={() => setShowBigBangPopup(true)} 
-                    className="mystical-button w-full"
-                    disabled={isBigBangLoading}
-                  >
-                    {isBigBangLoading ? (
-                      <>
-                        <Loader2 className="w-5 h-5 mr-3 animate-spin" />
-                        Initializing...
-                      </>
-                    ) : (
-                      <>
-                        <Crown className="w-5 h-5 mr-3" />
-                        Begin Cosmic Journey
-                        <CelestialIcon type="mystical" size="sm" className="ml-3" />
-                      </>
-                    )}
-                  </Button>
-                )
-              ) : session && loading ? (
-                <Button disabled className="mystical-button w-full opacity-50">
-                  <Loader2 className="w-5 h-5 mr-3 animate-spin" />
-                  Loading...
+              {session ? (
+                <Button onClick={() => router.push('/astral-nexus')} className="mystical-button w-full">
+                  <Sparkles className="w-5 h-5 mr-3" />
+                  Enter Astral Nexus
                   <CelestialIcon type="mystical" size="sm" className="ml-3" />
                 </Button>
               ) : (
-                <Button onClick={() => window.location.href = '/login'} className="mystical-button w-full">
+                <Button onClick={() => router.push('/login')} className="mystical-button w-full">
                   <Music className="w-5 h-5 mr-3" />
                   Connect Spotify
                   <CelestialIcon type="mystical" size="sm" className="ml-3" />
