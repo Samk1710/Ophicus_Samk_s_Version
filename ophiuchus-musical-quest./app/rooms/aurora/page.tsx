@@ -8,7 +8,6 @@ import { ProgressTracker } from "@/components/progress-tracker"
 import { CelestialIcon } from "@/components/celestial-icon"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Play, Pause, Send, Volume2, Rainbow, Loader2 } from "lucide-react"
 import { useGameState } from "@/components/providers/game-state-provider"
 import { SpotifySearch } from "@/components/spotify-search"
@@ -16,7 +15,6 @@ import { useRouter } from "next/navigation"
 
 export default function AuroraRoom() {
   const [isPlaying, setIsPlaying] = useState(false)
-  const [moodInput, setMoodInput] = useState("")
   const [selectedTrack, setSelectedTrack] = useState<{id: string; name: string} | null>(null)
   const [showScore, setShowScore] = useState(false)
   const [moodScore, setMoodScore] = useState<number | null>(null)
@@ -25,6 +23,7 @@ export default function AuroraRoom() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isCompleted, setIsCompleted] = useState(false)
   const [clueText, setClueText] = useState("")
+  const [feedbackText, setFeedbackText] = useState("")
   const audioRef = useRef<HTMLAudioElement>(null)
   const { sessionId, gameSession, refreshGameState } = useGameState()
   const router = useRouter()
@@ -76,13 +75,13 @@ export default function AuroraRoom() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!moodInput.trim() || !selectedTrack || isSubmitting) {
-      console.log('[Aurora] Cannot submit:', { moodInput, selectedTrack, isSubmitting })
+    if (!selectedTrack || isSubmitting) {
+      console.log('[Aurora] Cannot submit:', { selectedTrack, isSubmitting })
       return
     }
 
     setIsSubmitting(true)
-    console.log('[Aurora] Submitting:', { mood: moodInput, track: selectedTrack })
+    console.log('[Aurora] Submitting:', { track: selectedTrack })
 
     try {
       const response = await fetch('/api/rooms/aurora', {
@@ -90,24 +89,21 @@ export default function AuroraRoom() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sessionId,
-          guessedTrackId: selectedTrack.id,
-          emotionalDescription: moodInput
+          guessedTrackId: selectedTrack.id
         })
       })
 
       const data = await response.json()
       console.log('[Aurora] Result:', data)
 
-      setMoodScore(data.similarityScore)
+      setMoodScore(data.score)
+      setFeedbackText(data.feedback || '')
       setShowScore(true)
 
       if (data.passed) {
         setIsCompleted(true)
         setClueText(data.clue || '')
-        alert(`✨ Passed! Score: ${data.similarityScore}/10. ${data.clue}`)
         await refreshGameState()
-      } else {
-        alert(`Score: ${data.similarityScore}/10. ${data.attemptsRemaining} attempts remaining.`)
       }
     } catch (error) {
       console.error('[Aurora] Submit failed:', error)
@@ -218,24 +214,12 @@ export default function AuroraRoom() {
               </div>
             )}
 
-            {/* Mood Input and Track Selection */}
+            {/* Song Selection */}
             {!isCompleted && (
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <label className="block font-poppins text-sm text-green-200 mb-2">
-                    Describe the feeling this melody evokes:
-                  </label>
-                  <Input
-                    value={moodInput}
-                    onChange={(e) => setMoodInput(e.target.value)}
-                    placeholder="Enter the emotion or mood you feel..."
-                    className="glassmorphism border-green-400/30 text-green-100 placeholder-green-300/50"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-poppins text-sm text-green-200 mb-2">
-                    Which song from your library matches this feeling?
+                    Which song from your library matches this emotional moment?
                   </label>
                   <SpotifySearch
                     type="track"
@@ -246,7 +230,7 @@ export default function AuroraRoom() {
                         name: track.name
                       })
                     }}
-                    placeholder="Search for a song..."
+                    placeholder="Search for a song that fits the emotion..."
                   />
                   
                   {selectedTrack && (
@@ -261,7 +245,7 @@ export default function AuroraRoom() {
                 <Button 
                   type="submit" 
                   className="mystical-button w-full"
-                  disabled={!moodInput.trim() || !selectedTrack || isSubmitting}
+                  disabled={!selectedTrack || isSubmitting}
                 >
                   {isSubmitting ? (
                     <>
@@ -271,7 +255,7 @@ export default function AuroraRoom() {
                   ) : (
                     <>
                       <Send className="w-4 h-4 mr-2" />
-                      Submit Feeling
+                      Submit Song
                     </>
                   )}
                 </Button>
@@ -294,9 +278,19 @@ export default function AuroraRoom() {
                     />
                   ))}
                 </div>
-                <p className="font-poppins text-sm text-green-200 text-center">
-                  Your feeling resonates at {moodScore}/10 with the cosmic frequency
+                <p className="font-poppins text-sm text-green-200 text-center mb-2">
+                  Your song resonates at {moodScore}/10 with the cosmic frequency
                 </p>
+                {feedbackText && (
+                  <p className="font-poppins text-xs text-green-300 text-center italic">
+                    {feedbackText}
+                  </p>
+                )}
+                {!isCompleted && (
+                  <p className="font-poppins text-xs text-yellow-300 text-center mt-3">
+                    {moodScore >= 7 ? '✨ Excellent match!' : '💫 Try another song for a better match (need 7+ to pass)'}
+                  </p>
+                )}
               </div>
             )}
 
@@ -322,7 +316,7 @@ export default function AuroraRoom() {
               <div className="flex items-center justify-center">
                 <CelestialIcon type="sun" className="text-yellow-400 mr-2" />
                 <p className="font-poppins text-sm text-yellow-200">
-                  Listen deeply - the audio holds emotional secrets
+                  Listen deeply - suggest a song that matches the emotional moment you hear
                 </p>
               </div>
             </Card>

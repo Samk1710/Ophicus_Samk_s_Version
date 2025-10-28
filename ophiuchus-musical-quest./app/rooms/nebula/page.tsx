@@ -8,11 +8,13 @@ import { ProgressTracker } from "@/components/progress-tracker"
 import { CelestialIcon } from "@/components/celestial-icon"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Send, Circle, Loader2 } from "lucide-react"
+import { Send, Circle, Loader2, Sparkles, X } from "lucide-react"
 import Link from "next/link"
 import { useGameState } from "@/components/providers/game-state-provider"
 import { SpotifySearch } from "@/components/spotify-search"
 import { useRouter } from "next/navigation"
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction } from "@/components/ui/alert-dialog"
+import { celebrateCorrectAnswer } from "@/components/cosmic-confetti"
 
 export default function NebulaRoom() {
   const [selectedSong, setSelectedSong] = useState<{id: string; name: string; artist: string} | null>(null)
@@ -23,6 +25,9 @@ export default function NebulaRoom() {
   const [riddle, setRiddle] = useState("")
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false)
+  const [showFailureDialog, setShowFailureDialog] = useState(false)
+  const [earnedPoints, setEarnedPoints] = useState(0)
   const { sessionId, gameSession, refreshGameState } = useGameState()
   const router = useRouter()
 
@@ -93,8 +98,18 @@ export default function NebulaRoom() {
       
       if (data.correct) {
         setClueText(data.clue || '')
+        setEarnedPoints(data.points || 100)
         await refreshGameState()
+        
+        // Celebrate with confetti
+        if (data.celebrateCorrect) {
+          celebrateCorrectAnswer()
+        }
+        
+        setShowSuccessDialog(true)
         console.log('[Nebula] CORRECT! Moving to next room...')
+      } else {
+        setShowFailureDialog(true)
       }
     } catch (error) {
       console.error('[Nebula] Submit failed:', error)
@@ -292,6 +307,99 @@ export default function NebulaRoom() {
           </div>
         </div>
       </div>
+
+      {/* Success Dialog */}
+      <AlertDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+        <AlertDialogContent className="glassmorphism border-green-400/50 max-w-md">
+          <AlertDialogHeader>
+            <div className="flex justify-between items-start">
+              <div className="flex-1">
+                <AlertDialogTitle className="font-cinzel text-2xl text-green-100 mb-2 flex items-center gap-2">
+                  <Sparkles className="w-6 h-6 text-green-400" />
+                  Nebula Solved!
+                </AlertDialogTitle>
+                <AlertDialogDescription className="font-poppins text-green-200 space-y-3">
+                  <p className="text-lg">
+                    ✨ The nebula parts, revealing the cosmic truth!
+                  </p>
+                  <div className="bg-green-900/20 rounded-lg p-3 border border-green-400/30">
+                    <p className="font-cormorant text-gold-200 italic">
+                      "{clueText}"
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-center gap-2 pt-2">
+                    <span className="text-2xl font-bold text-gold-300">+{earnedPoints}</span>
+                    <span className="text-sm text-purple-300">points</span>
+                  </div>
+                </AlertDialogDescription>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowSuccessDialog(false)}
+                className="text-green-300 hover:text-green-100 hover:bg-green-500/10"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              onClick={() => {
+                setShowSuccessDialog(false)
+                router.push('/astral-nexus')
+              }}
+              className="mystical-button w-full"
+            >
+              Continue Quest
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Failure Dialog */}
+      <AlertDialog open={showFailureDialog} onOpenChange={setShowFailureDialog}>
+        <AlertDialogContent className="glassmorphism border-purple-400/50 max-w-md">
+          <AlertDialogHeader>
+            <div className="flex justify-between items-start">
+              <div className="flex-1">
+                <AlertDialogTitle className="font-cinzel text-2xl text-purple-100 mb-2">
+                  Not Quite Right...
+                </AlertDialogTitle>
+                <AlertDialogDescription className="font-poppins text-purple-200 space-y-3">
+                  <p>
+                    {attempts > 0 
+                      ? "🌌 The nebula whispers... not quite right. Listen deeper to the cosmic echoes."
+                      : "💫 The mists part, revealing a fragment of truth. Continue your journey through the other chambers."}
+                  </p>
+                  <div className="flex items-center justify-center gap-2 pt-2">
+                    <Circle className="w-3 h-3 text-purple-400" />
+                    <span className="text-sm text-purple-300">
+                      {attempts > 0 ? `${attempts} attempt${attempts !== 1 ? 's' : ''} remaining` : 'No attempts remaining'}
+                    </span>
+                  </div>
+                </AlertDialogDescription>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowFailureDialog(false)}
+                className="text-purple-300 hover:text-purple-100 hover:bg-purple-500/10"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              onClick={() => setShowFailureDialog(false)}
+              className="mystical-button w-full"
+            >
+              {attempts > 0 ? 'Try Again' : 'Continue Quest'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

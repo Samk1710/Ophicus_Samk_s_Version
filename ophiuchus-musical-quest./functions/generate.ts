@@ -118,6 +118,10 @@ async function saveWaveFile(
 }
 
 export async function generateAudio(prompt: string, characters: { name: string, voice: string }[]): Promise<string> {
+   console.log('[generateAudio] Starting audio generation...');
+   console.log('[generateAudio] Prompt length:', prompt.length);
+   console.log('[generateAudio] Characters:', characters);
+   
    const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
   
    const speakerVoiceConfigs = characters.map((character) => ({
@@ -127,38 +131,64 @@ export async function generateAudio(prompt: string, characters: { name: string, 
       }
    }));
 
-
-   const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash-preview-tts",
-      // @ts-ignore
-      contents: [{ parts: [{ text: prompt }] }],
-      config: {
-            responseModalities: ['AUDIO'],
-            speechConfig: {
-               multiSpeakerVoiceConfig: {
-                  speakerVoiceConfigs: speakerVoiceConfigs,
+   try {
+      console.log('[generateAudio] Calling Gemini TTS API...');
+      const response = await ai.models.generateContent({
+         model: "gemini-2.5-flash-preview-tts",
+         // @ts-ignore
+         contents: [{ parts: [{ text: prompt }] }],
+         config: {
+               responseModalities: ['AUDIO'],
+               speechConfig: {
+                  multiSpeakerVoiceConfig: {
+                     speakerVoiceConfigs: speakerVoiceConfigs,
+                  }
                }
-            }
+         }
+      });
+
+      const data = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+      
+      if (!data) {
+         console.error('[generateAudio] No audio data in response:', JSON.stringify(response, null, 2));
+         throw new Error('No audio data received from API');
       }
-   });
+      
+      console.log('[generateAudio] Audio data received, size:', Buffer.from(data, 'base64').length, 'bytes');
+      const audioBuffer = Buffer.from(data, 'base64');
 
-   const data = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-   
-   if (!data) {
-      throw new Error('No audio data received from API');
+      const id = crypto.randomUUID();
+      const fileName = `audio-${id}.wav`;
+      
+      // Ensure the public/audio directory exists
+      const audioDir = path.join(process.cwd(), "public", "audio");
+      const fs = await import('fs');
+      if (!fs.existsSync(audioDir)) {
+         console.log('[generateAudio] Creating audio directory:', audioDir);
+         fs.mkdirSync(audioDir, { recursive: true });
+      }
+      
+      // Save to public/audio directory so it can be served by Next.js
+      const publicPath = path.join(audioDir, fileName);
+      console.log('[generateAudio] Saving audio file to:', publicPath);
+      
+      await saveWaveFile(publicPath, audioBuffer);
+      
+      console.log('[generateAudio] Audio file saved successfully');
+      
+      // Return the public URL path
+      const publicUrl = `/audio/${fileName}`;
+      console.log('[generateAudio] Public URL:', publicUrl);
+      
+      return publicUrl;
+   } catch (error) {
+      console.error('[generateAudio] Error generating audio:', error);
+      if (error instanceof Error) {
+         console.error('[generateAudio] Error message:', error.message);
+         console.error('[generateAudio] Error stack:', error.stack);
+      }
+      throw error;
    }
-   
-   const audioBuffer = Buffer.from(data, 'base64');
-
-   const id = crypto.randomUUID();
-   const fileName = `audio-${id}.wav`;
-   
-   // Save to public/audio directory so it can be served by Next.js
-   const publicPath = path.join(process.cwd(), "public", "audio", fileName);
-   await saveWaveFile(publicPath, audioBuffer);
-   
-   // Return the public URL path
-   return `/audio/${fileName}`;
 }
 
 // console.log(await generate("Hello, how are you?"))
