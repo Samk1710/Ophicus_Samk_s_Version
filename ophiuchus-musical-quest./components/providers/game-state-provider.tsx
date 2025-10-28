@@ -21,14 +21,42 @@ export function GameStateProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load session ID from localStorage on mount
+  // Load session ID from localStorage on mount and check if active
   useEffect(() => {
-    const savedSessionId = localStorage.getItem('gameSessionId');
-    if (savedSessionId) {
-      console.log('[GameStateProvider] Found saved session:', savedSessionId);
-      setSessionId(savedSessionId);
-      refreshGameState(savedSessionId);
-    }
+    const checkActiveSession = async () => {
+      const savedSessionId = localStorage.getItem('gameSessionId');
+      if (savedSessionId) {
+        console.log('[GameStateProvider] Found saved session:', savedSessionId);
+        
+        // Check if session still exists in DB
+        try {
+          const response = await fetch(`/api/game/${savedSessionId}`);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.session && !data.session.completed) {
+              setSessionId(savedSessionId);
+              setGameSession(data.session);
+            } else {
+              // Session completed or doesn't exist, clear it
+              console.log('[GameStateProvider] Session completed or not found, clearing');
+              localStorage.removeItem('gameSessionId');
+              setSessionId(null);
+              setGameSession(null);
+            }
+          } else {
+            // Session doesn't exist, clear localStorage
+            localStorage.removeItem('gameSessionId');
+            setSessionId(null);
+          }
+        } catch (error) {
+          console.error('[GameStateProvider] Error checking session:', error);
+          // On error, keep the session ID but mark as error
+          setError('Failed to check session status');
+        }
+      }
+    };
+    
+    checkActiveSession();
   }, []);
 
   const initializeBigBang = async () => {

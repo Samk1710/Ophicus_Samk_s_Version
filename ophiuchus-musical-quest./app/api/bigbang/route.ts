@@ -5,6 +5,8 @@ import { initializeBigBang } from '@/functions/bigbang';
 import { createGameSession } from '@/functions/gameState';
 import spotifyApi from '@/lib/spotify';
 import { TrackWithHistory } from '@/hooks/useSpotifyUserData';
+import connectDB from '@/lib/mongodb';
+import GameSession from '@/lib/models/GameSession';
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
@@ -25,6 +27,21 @@ export async function POST(request: NextRequest) {
       username: session.user.username,
       hasAccessToken: !!session.user.accessToken
     });
+
+    // Connect to DB and check for existing active sessions
+    await connectDB();
+    console.log('🗄️  [POST /api/bigbang] Checking for existing active sessions...');
+    
+    const existingSession = await GameSession.findOne({
+      userId: session.user.username,
+      completed: false
+    });
+
+    if (existingSession) {
+      console.log('⚠️  [POST /api/bigbang] Found existing active session, deleting:', existingSession._id);
+      await GameSession.findByIdAndDelete(existingSession._id);
+      console.log('✅ [POST /api/bigbang] Old session deleted');
+    }
 
     // Set Spotify access token
     spotifyApi.setAccessToken(session.user.accessToken);

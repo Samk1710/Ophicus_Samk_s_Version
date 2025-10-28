@@ -16,6 +16,9 @@ export interface IRoomClue {
   attempts?: number;
   completed?: boolean;
   audioUrl?: string;
+  points?: number;
+  revealedSong?: ISong;
+  emotionalSituation?: string;  // For Aurora room
 }
 
 export interface IGameSession extends Document {
@@ -32,9 +35,14 @@ export interface IGameSession extends Document {
     aurora?: IRoomClue;
     nova?: IRoomClue;
   };
-  finalGuesses: number;
+  finalGuessAttempts: number;
+  totalPoints: number;
   completed: boolean;
-  ophiuchusIdentity?: string;
+  ophiuchusIdentity?: {
+    title: string;
+    description: string;
+    imageUrl: string;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -54,7 +62,10 @@ const RoomClueSchema = new Schema({
   score: { type: Number },
   attempts: { type: Number },
   completed: { type: Boolean, default: false },
-  audioUrl: { type: String }
+  audioUrl: { type: String },
+  points: { type: Number, default: 0 },
+  revealedSong: { type: SongSchema },
+  emotionalSituation: { type: String }
 });
 
 const GameSessionSchema = new Schema({
@@ -71,9 +82,14 @@ const GameSessionSchema = new Schema({
     aurora: { type: RoomClueSchema },
     nova: { type: RoomClueSchema }
   },
-  finalGuesses: { type: Number, default: 0 },
+  finalGuessAttempts: { type: Number, default: 0 },
+  totalPoints: { type: Number, default: 0 },
   completed: { type: Boolean, default: false },
-  ophiuchusIdentity: { type: String }
+  ophiuchusIdentity: {
+    title: { type: String },
+    description: { type: String },
+    imageUrl: { type: String }
+  }
 }, {
   timestamps: true
 });

@@ -53,57 +53,96 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  console.log('\n' + '☄️  COMET ROOM - SUBMIT GUESS (ONE CHANCE)'.padEnd(80, ' '));
+  console.log('─'.repeat(80));
+  
   try {
-    console.log('[POST /api/rooms/comet] Processing lyric guess');
+    console.log('📡 [POST /api/rooms/comet] Checking authentication...');
 
     const session = await getServerSession(authOptions);
     if (!session?.user) {
+      console.error('❌ [POST /api/rooms/comet] Unauthorized');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    console.log('✅ [POST /api/rooms/comet] User authenticated:', session.user.username);
 
     const body = await request.json();
-    const { sessionId, guess } = body;
+    const { sessionId, guessedTrackId } = body;
+    console.log('📥 [POST /api/rooms/comet] Request body:', { sessionId, guessedTrackId });
 
-    if (!sessionId || !guess) {
+    if (!sessionId || !guessedTrackId) {
+      console.error('❌ [POST /api/rooms/comet] Missing required fields');
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
     const gameSession = await getGameSession(sessionId);
     if (!gameSession) {
+      console.error('❌ [POST /api/rooms/comet] Game session not found');
       return NextResponse.json({ error: 'Game session not found' }, { status: 404 });
     }
 
     const songIndex = gameSession.intermediarySongs.length > 1 ? 1 : 0;
     const intermediarySong = gameSession.intermediarySongs[songIndex];
-    const isCorrect = checkCometGuess(guess, intermediarySong);
+    console.log('🎯 [POST /api/rooms/comet] Comet song:', {
+      id: intermediarySong.id,
+      name: intermediarySong.name
+    });
+    console.log('🤔 [POST /api/rooms/comet] User guessed ID:', guessedTrackId);
+    
+    const isCorrect = checkCometGuess(guessedTrackId, intermediarySong);
+    console.log(isCorrect ? '✅ [POST /api/rooms/comet] CORRECT!' : '❌ [POST /api/rooms/comet] INCORRECT');
 
-    console.log('[POST /api/rooms/comet] Guess result:', isCorrect);
+    // Points: 100 if correct, 0 if wrong (only one chance)
+    const points = isCorrect ? 100 : 0;
+    console.log(`🎁 [POST /api/rooms/comet] Points awarded: ${points}`);
 
     let rewardClue = '';
     if (isCorrect) {
+      console.log('🎁 [POST /api/rooms/comet] Generating reward clue...');
+      const startTime = Date.now();
       rewardClue = await generateCometReward(gameSession.cosmicSong);
+      console.log(`✅ [POST /api/rooms/comet] Reward generated in ${Date.now() - startTime}ms`);
+    } else {
+      console.log('⚠️  [POST /api/rooms/comet] Wrong answer - no clue given');
+      rewardClue = "The comet has passed, and its secret remains hidden in the cosmic void.";
     }
 
+    console.log('🎭 [POST /api/rooms/comet] ALWAYS REVEALING COMET SONG (one chance only)');
+    
+    // Update game state - always completed after one attempt
+    console.log('💾 [POST /api/rooms/comet] Updating game state...');
     await updateRoomCompletion(sessionId, 'comet', {
       clue: rewardClue,
       correct: isCorrect,
-      completed: true
+      attempts: 1,
+      completed: true,
+      points: points,
+      revealedSong: intermediarySong  // Always reveal
     });
-
-    console.log('[POST /api/rooms/comet] Room completed');
+    console.log('✅ [POST /api/rooms/comet] Game state updated');
+    console.log('─'.repeat(80) + '\n');
 
     return NextResponse.json({
       success: true,
       correct: isCorrect,
-      rewardClue,
-      correctSong: isCorrect ? {
+      clue: rewardClue,
+      points: points,
+      completed: true,
+      revealedSong: {
+        id: intermediarySong.id,
         name: intermediarySong.name,
-        artists: intermediarySong.artists
-      } : null
+        artists: intermediarySong.artists,
+        album: intermediarySong.album,
+        imageUrl: intermediarySong.imageUrl
+      }
     });
 
   } catch (error) {
-    console.error('[POST /api/rooms/comet] Error:', error);
+    console.error('💥 [POST /api/rooms/comet] Error:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    });
+    console.log('─'.repeat(80) + '\n');
     return NextResponse.json({ error: 'Failed to process guess' }, { status: 500 });
   }
 }

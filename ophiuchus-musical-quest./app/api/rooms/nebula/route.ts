@@ -126,19 +126,32 @@ export async function POST(request: NextRequest) {
     console.log(`📊 [POST /api/rooms/nebula] Attempt ${currentAttempts}/3`);
 
     let rewardClue = '';
+    let points = 0;
+    
+    // Points system: 100 for first try, 50 for second, 25 for third
     if (isCorrect) {
+      if (currentAttempts === 1) points = 100;
+      else if (currentAttempts === 2) points = 50;
+      else points = 25;
+      
+      console.log(`🎁 [POST /api/rooms/nebula] CORRECT on attempt ${currentAttempts}! Points: ${points}`);
       console.log('🎁 [POST /api/rooms/nebula] Generating reward clue...');
       const startTime = Date.now();
       rewardClue = await generateNebulaReward(gameSession.cosmicSong);
       console.log(`✅ [POST /api/rooms/nebula] Reward generated in ${Date.now() - startTime}ms`);
       console.log('📜 [POST /api/rooms/nebula] Reward clue:', rewardClue.substring(0, 100) + '...');
     } else if (currentAttempts >= 3) {
-      console.log('⚠️  [POST /api/rooms/nebula] Failed all attempts, generating penalty clue...');
+      points = 0;
+      console.log('⚠️  [POST /api/rooms/nebula] Failed all 3 attempts, no points awarded');
+      console.log('⚠️  [POST /api/rooms/nebula] Generating penalty clue...');
       const startTime = Date.now();
       rewardClue = await generateNebulaPenalty(gameSession.cosmicSong);
       console.log(`✅ [POST /api/rooms/nebula] Penalty generated in ${Date.now() - startTime}ms`);
       console.log('📜 [POST /api/rooms/nebula] Penalty clue (misleading):', rewardClue.substring(0, 100) + '...');
     }
+
+    const shouldReveal = isCorrect || currentAttempts >= 3;
+    console.log(`🎭 [POST /api/rooms/nebula] Reveal nebula song: ${shouldReveal}`);
 
     // Update game state
     console.log('💾 [POST /api/rooms/nebula] Updating game state...');
@@ -146,7 +159,9 @@ export async function POST(request: NextRequest) {
       clue: rewardClue,
       correct: isCorrect,
       attempts: currentAttempts,
-      completed: isCorrect || currentAttempts >= 3
+      completed: shouldReveal,
+      points: points,
+      revealedSong: shouldReveal ? intermediarySong : undefined
     });
     console.log('✅ [POST /api/rooms/nebula] Game state updated');
 
@@ -156,11 +171,15 @@ export async function POST(request: NextRequest) {
       success: true,
       correct: isCorrect,
       clue: rewardClue,
+      points: points,
       attemptsRemaining: 3 - currentAttempts,
-      completed: isCorrect || currentAttempts >= 3,
-      correctSong: (isCorrect || currentAttempts >= 3) ? {
+      completed: shouldReveal,
+      revealedSong: shouldReveal ? {
+        id: intermediarySong.id,
         name: intermediarySong.name,
-        artists: intermediarySong.artists
+        artists: intermediarySong.artists,
+        album: intermediarySong.album,
+        imageUrl: intermediarySong.imageUrl
       } : null
     });
 

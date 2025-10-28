@@ -1,100 +1,152 @@
 import { ISong } from '@/lib/models/GameSession';
 import { generate, generateAudio } from '../generate';
 
-export interface AuroraVignette {
-  text: string;
-  audioId: string; // ID for the generated audio file
-  emotion: string; // The emotion (not shown to player)
+export interface AuroraEmotionalSituation {
+  situation: string;  // e.g., "breakup", "first love", "crushing", "yearning", "adulting", "life is hard"
+  audioText: string;
+  audioUrl: string;
 }
 
-export async function generateAuroraVignette(cosmicSong: ISong): Promise<AuroraVignette> {
-  console.log('[generateAuroraVignette] Generating emotional vignette for:', cosmicSong.name);
+// Common emotional situations
+const EMOTIONAL_SITUATIONS = [
+  'heartbroken after a breakup',
+  'experiencing first love',
+  'crushing on someone',
+  'yearning for someone far away',
+  'struggling with adulting and life responsibilities',
+  'feeling lost and searching for meaning',
+  'celebrating a major achievement',
+  'dealing with loneliness',
+  'missing someone deeply',
+  'feeling nostalgic about the past',
+  'going through a difficult transition',
+  'healing from emotional pain'
+];
 
-  // First, identify the song's primary emotion
-  const emotionPrompt = `Identify the primary emotion or mood of this song in ONE WORD:
+export async function generateAuroraEmotionalSituation(): Promise<AuroraEmotionalSituation> {
+  console.log('[generateAuroraEmotionalSituation] Creating emotional scenario...');
 
-Song: ${cosmicSong.name}
-Artist: ${cosmicSong.artists.join(', ')}
+  // Randomly select a situation
+  const situation = EMOTIONAL_SITUATIONS[Math.floor(Math.random() * EMOTIONAL_SITUATIONS.length)];
+  console.log('[generateAuroraEmotionalSituation] Selected situation:', situation);
 
-Return ONLY one word describing the dominant emotion (examples: joy, melancholy, longing, excitement, nostalgia, heartbreak, empowerment, peace).`;
+  // Generate a realistic audio narrative for that situation
+  const audioPrompt = `Create a short, emotional monologue (3-4 sentences, max 60 seconds when spoken) of someone going through this situation: ${situation}.
 
-  const emotion = (await generate(emotionPrompt)).trim().toLowerCase();
-  console.log('[generateAuroraVignette] Identified emotion:', emotion);
+Make it:
+- REALISTIC and RELATABLE - like a real person talking
+- EMOTIONAL but not overdramatic
+- Hint at the situation WITHOUT explicitly stating it
+- Use natural, conversational language
+- Show emotion through words and tone
 
-  // Generate a short emotional story/vignette
-  const vignettePrompt = `Create a short, emotional spoken narrative (2-3 sentences) that captures the feeling of this song without mentioning the title or artist:
+Examples:
+- For breakup: "I keep checking my phone even though I know they won't text. God, why is it so quiet here? Everything reminds me of them... I just want to stop feeling like this."
+- For first job: "I can't believe I actually did it! Mom called and I tried to play it cool but I was literally jumping around my apartment. This is real, this is actually happening!"
+- For adulting: "When did life get so... exhausting? Bills, groceries, work, repeat. I thought being an adult would feel different, you know? More... together."
 
-Song: ${cosmicSong.name}
-Artist: ${cosmicSong.artists.join(', ')}
-Emotion: ${emotion}
+Write ONLY the monologue, nothing else. Make it emotional and authentic.`;
 
-Write it as a personal memory or scenario told in first person.
-Make it evocative and emotional but don't mention the song.
-The vignette should make someone FEEL the same emotion as the song.
+  const audioText = await generate(audioPrompt);
+  console.log('[generateAuroraEmotionalSituation] Audio text generated');
+  console.log('[generateAuroraEmotionalSituation] Preview:', audioText.substring(0, 100) + '...');
 
-Example: "I remember driving down that empty highway at 2 AM, windows down, feeling like I could finally breathe again. Everything that had been weighing on me just... lifted. For the first time in months, I smiled at nothing in particular."
-
-Return ONLY the narrative text, nothing else.`;
-
-  const vignetteText = await generate(vignettePrompt);
-  console.log('[generateAuroraVignette] Vignette text generated');
-
-  // Generate audio using multi-speaker TTS
+  // Generate audio using TTS with appropriate emotional voice
   const characters = [
-    { name: "Narrator", voice: "Charon" }
+    { name: "Person", voice: "Charon" }  // Emotional, expressive voice
   ];
 
-  const audioId = await generateAudio(vignetteText, characters);
-  console.log('[generateAuroraVignette] Audio generated with ID:', audioId);
+  const audioId = await generateAudio(audioText.trim(), characters);
+  console.log('[generateAuroraEmotionalSituation] Audio generated with ID:', audioId);
+
+  // Construct the audio URL (assuming it's stored in Google Cloud Storage)
+  const audioUrl = `https://storage.googleapis.com/${process.env.GOOGLE_CLOUD_BUCKET || 'your-bucket'}/${audioId}.wav`;
 
   return {
-    text: vignetteText.trim(),
-    audioId,
-    emotion
+    situation,
+    audioText: audioText.trim(),
+    audioUrl
   };
 }
 
-export async function scoreAuroraMatch(
-  userGuess: ISong,
-  cosmicSong: ISong,
-  targetEmotion: string
-): Promise<number> {
-  console.log('[scoreAuroraMatch] Scoring emotional match');
-  console.log('[scoreAuroraMatch] User guess:', userGuess.name);
-  console.log('[scoreAuroraMatch] Target emotion:', targetEmotion);
+export async function scoreAuroraSongMatch(
+  userGuessedSong: ISong,
+  emotionalSituation: string,
+  audioText: string
+): Promise<{ score: number; feedback: string }> {
+  console.log('[scoreAuroraSongMatch] Scoring song relevance to emotional situation');
+  console.log('[scoreAuroraSongMatch] Guessed song:', userGuessedSong.name);
+  console.log('[scoreAuroraSongMatch] Situation:', emotionalSituation);
 
-  const prompt = `Score how well this song matches the emotional vibe described.
+  const prompt = `You are evaluating how well a song suggestion matches an emotional situation.
 
-Guessed Song: ${userGuess.name} by ${userGuess.artists.join(', ')}
-Target Emotion: ${targetEmotion}
-Cosmic Song (for reference): ${cosmicSong.name} by ${cosmicSong.artists.join(', ')}
+EMOTIONAL SITUATION: Someone is ${emotionalSituation}
+THEIR WORDS: "${audioText}"
 
-Rate the emotional similarity on a scale of 1-10.
-Consider mood, energy, themes, and emotional resonance.
+SUGGESTED SONG: "${userGuessedSong.name}" by ${userGuessedSong.artists.join(', ')}
 
-Return ONLY a number between 1 and 10, nothing else.`;
+Rate how appropriate and helpful this song suggestion is on a scale of 0-10:
 
-  const scoreText = await generate(prompt);
-  const score = parseInt(scoreText.trim());
-  
-  console.log('[scoreAuroraMatch] Score:', score);
-  return isNaN(score) ? 5 : Math.max(1, Math.min(10, score));
+Consider:
+- Does the song's mood match the emotional state?
+- Would this song help or comfort someone in this situation?
+- Is the lyrical content relevant?
+- Does the energy level match what they might need?
+
+Examples:
+- "The Night We Met" by Lord Huron for someone crying after a breakup: 9-10 (perfect match - melancholic, nostalgic, about lost love)
+- "Jingle Bells" for someone crying after a breakup: 1-2 (terrible match - upbeat, holiday cheer, completely wrong mood)
+- "Happy" by Pharrell for someone celebrating first job: 9-10 (great match - joyful, celebratory)
+- "Hurt" by Johnny Cash for celebrating first job: 2-3 (wrong mood - dark and painful)
+
+Return your response in this EXACT format:
+SCORE: [0-10]
+FEEDBACK: [One sentence explaining why this score - be honest and specific]`;
+
+  const response = await generate(prompt);
+  console.log('[scoreAuroraSongMatch] AI response:', response);
+
+  // Parse the response
+  const scoreMatch = response.match(/SCORE:\s*(\d+)/i);
+  const feedbackMatch = response.match(/FEEDBACK:\s*(.+)/i);
+
+  const score = scoreMatch ? parseInt(scoreMatch[1]) : 5;
+  const feedback = feedbackMatch ? feedbackMatch[1].trim() : "Song evaluated based on emotional resonance.";
+
+  console.log('[scoreAuroraSongMatch] Final score:', score);
+  console.log('[scoreAuroraSongMatch] Feedback:', feedback);
+
+  return {
+    score: Math.max(0, Math.min(10, score)),
+    feedback
+  };
 }
 
 export async function generateAuroraReward(cosmicSong: ISong, score: number): Promise<string> {
-  console.log('[generateAuroraReward] Generating mood-aligned clue');
+  console.log('[generateAuroraReward] Generating Aurora clue based on score:', score);
 
-  const prompt = `Create a mood or emotion-based clue about this song:
+  // Only give clue if score >= 7
+  if (score < 7) {
+    return "The aurora's light dims... your suggestion did not resonate with the cosmic frequency.";
+  }
+
+  const prompt = `Create a mystical, poetic clue about this song focusing on its EMOTIONAL RESONANCE:
 
 Song: ${cosmicSong.name}
 Artist: ${cosmicSong.artists.join(', ')}
 
-Create a mystical 1-2 line clue that hints at the emotional journey or feeling of the song.
-Make it poetic and celestial.
+The clue should:
+- Hint at the FEELING or MOOD of the song
+- Be celestial and mystical
+- Be 1-2 sentences
+- NOT mention the title or artist
+- Help the player understand what kind of emotion to look for
+
+Example: "The cosmic song carries the weight of bittersweet memories, a melody that speaks to hearts that have loved and lost."
 
 Return ONLY the clue text, nothing else.`;
 
   const reward = await generate(prompt);
-  console.log('[generateAuroraReward] Reward generated');
+  console.log('[generateAuroraReward] Reward clue generated');
   return reward.trim();
 }
