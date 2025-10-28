@@ -5,6 +5,7 @@ import "./globals.css"
 import { Navbar } from "@/components/navbar"
 import { LunarChatbot } from "@/components/lunar-chatbot"
 import SessionProvider from "@/components/providers/session-provider"
+import { GameStateProvider } from "@/components/providers/game-state-provider"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -50,11 +51,13 @@ export default function RootLayout({
         className={`${inter.variable} ${poppins.variable} ${cormorantGaramond.variable} ${cinzelDecorative.variable} antialiased`}
       >
         <SessionProvider>
-          <div className="min-h-screen bg-gray-950 text-gray-100 font-inter">
-            <Navbar />
-            <main className="pt-16">{children}</main>
-            <LunarChatbot />
-          </div>
+          <GameStateProvider>
+            <div className="min-h-screen bg-gray-950 text-gray-100 font-inter">
+              <Navbar />
+              <main className="pt-16">{children}</main>
+              <LunarChatbot />
+            </div>
+          </GameStateProvider>
         </SessionProvider>
       </body>
     </html>
