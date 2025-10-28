@@ -19,6 +19,7 @@ export interface IRoomClue {
   points?: number;
   revealedSong?: ISong;
   emotionalSituation?: string;  // For Aurora room
+  questionsAsked?: number;  // For Cradle room
 }
 
 export interface IGameSession extends Document {

@@ -57,10 +57,10 @@ Write ONLY the monologue, nothing else. Make it emotional and authentic.`;
   ];
 
   const audioId = await generateAudio(audioText.trim(), characters);
-  console.log('[generateAuroraEmotionalSituation] Audio generated with ID:', audioId);
+  console.log('[generateAuroraEmotionalSituation] Audio generated, URL:', audioId);
 
-  // Construct the audio URL (assuming it's stored in Google Cloud Storage)
-  const audioUrl = `https://storage.googleapis.com/${process.env.GOOGLE_CLOUD_BUCKET || 'your-bucket'}/${audioId}.wav`;
+  // audioId is now the public URL path like /audio/audio-uuid.wav
+  const audioUrl = audioId;
 
   return {
     situation,

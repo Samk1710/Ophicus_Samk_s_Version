@@ -6,17 +6,40 @@ import path from 'path';
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyANqqfDccgTgAR0YEEKuT9LVELZ5eF10Tc';
 
 export const generate = async (prompt: string) => {
-    try {
-        const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-        const result = await model.generateContent(prompt);
-        const response = result.response;
-        const text = response.text();
-        return text;
-    } catch (error) {
-        console.error('Error generating response with Gemini:', error);
-        throw error;
+    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+    
+    // Try with gemini-2.0-flash first, fallback to gemini-1.5-flash if overloaded
+    const models = ["gemini-2.0-flash", "gemini-1.5-flash"];
+    let lastError = null;
+    
+    for (const modelName of models) {
+        try {
+            console.log(`[generate] Attempting with model: ${modelName}`);
+            const model = genAI.getGenerativeModel({ model: modelName });
+            const result = await model.generateContent(prompt);
+            const response = result.response;
+            const text = response.text();
+            console.log(`[generate] Success with ${modelName}`);
+            return text;
+        } catch (error) {
+            console.error(`[generate] Error with ${modelName}:`, error);
+            lastError = error;
+            
+            // If it's a 503 error and we have more models to try, continue
+            if (error instanceof Error && error.message.includes('503') && modelName !== models[models.length - 1]) {
+                console.log(`[generate] ${modelName} overloaded, trying fallback...`);
+                continue;
+            }
+            
+            // For other errors or last model, throw
+            if (modelName === models[models.length - 1]) {
+                break;
+            }
+        }
     }
+    
+    console.error('Error generating response with Gemini:', lastError);
+    throw lastError;
 }
 
 export const generateWithImage = async (prompt: string, image?: File) => {
@@ -96,9 +119,7 @@ async function saveWaveFile(
 
 export async function generateAudio(prompt: string, characters: { name: string, voice: string }[]): Promise<string> {
    const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
-  // const fname= 'output.wav';
-  // const audio=fs.readFileSync(fname);
-  // return audio;
+  
    const speakerVoiceConfigs = characters.map((character) => ({
       speaker: character.name,
       voiceConfig: {
@@ -122,14 +143,22 @@ export async function generateAudio(prompt: string, characters: { name: string, 
    });
 
    const data = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-   const audioBuffer = Buffer.from(data || '', 'base64');
+   
+   if (!data) {
+      throw new Error('No audio data received from API');
+   }
+   
+   const audioBuffer = Buffer.from(data, 'base64');
 
    const id = crypto.randomUUID();
-
-   const fileName = `output-${id}.wav`;
-   await saveWaveFile(path.join(process.cwd(), "temp", fileName), audioBuffer);
+   const fileName = `audio-${id}.wav`;
    
-   return id;
+   // Save to public/audio directory so it can be served by Next.js
+   const publicPath = path.join(process.cwd(), "public", "audio", fileName);
+   await saveWaveFile(publicPath, audioBuffer);
+   
+   // Return the public URL path
+   return `/audio/${fileName}`;
 }
 
 // console.log(await generate("Hello, how are you?"))

@@ -29,12 +29,16 @@ Return ONLY the lyric text, nothing else.`;
   };
 }
 
-export function checkCometGuess(guess: string, correctSong: ISong): boolean {
-  const normalizedGuess = guess.toLowerCase().trim().replace(/[^a-z0-9]/g, '');
-  const normalizedSong = correctSong.name.toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+export function checkCometGuess(guessedTrackId: string, correctSong: ISong): boolean {
+  // Compare Spotify IDs directly
+  console.log('[checkCometGuess] Comparing Spotify IDs:');
+  console.log('[checkCometGuess] Guessed ID:', guessedTrackId);
+  console.log('[checkCometGuess] Correct ID:', correctSong.id);
   
-  console.log('[checkCometGuess] Comparing:', normalizedGuess, 'vs', normalizedSong);
-  return normalizedGuess === normalizedSong;
+  const isCorrect = guessedTrackId === correctSong.id;
+  console.log('[checkCometGuess] Match:', isCorrect);
+  
+  return isCorrect;
 }
 
 export async function generateCometReward(cosmicSong: ISong): Promise<string> {

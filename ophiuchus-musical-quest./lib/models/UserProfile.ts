@@ -73,5 +73,6 @@ const UserProfileSchema = new Schema({
 // Indexes for faster queries
 UserProfileSchema.index({ userId: 1 });
 UserProfileSchema.index({ spotifyUserId: 1 });
+UserProfileSchema.index({ totalPoints: -1 }); // For leaderboard sorting
 
 export default mongoose.models.UserProfile || mongoose.model<IUserProfile>('UserProfile', UserProfileSchema);

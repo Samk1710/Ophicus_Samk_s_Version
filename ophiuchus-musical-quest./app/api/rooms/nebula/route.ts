@@ -174,6 +174,7 @@ export async function POST(request: NextRequest) {
       points: points,
       attemptsRemaining: 3 - currentAttempts,
       completed: shouldReveal,
+      celebrateCorrect: isCorrect, // Trigger confetti on correct answer
       revealedSong: shouldReveal ? {
         id: intermediarySong.id,
         name: intermediarySong.name,

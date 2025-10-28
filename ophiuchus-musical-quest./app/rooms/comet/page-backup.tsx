@@ -6,13 +6,13 @@ import { useState, useEffect } from "react"
 import { CosmicBackground } from "@/components/cosmic-background"
 import { ProgressTracker } from "@/components/progress-tracker"
 import { CelestialIcon } from "@/components/celestial-icon"
+import { celebrateCorrectAnswer } from "@/components/cosmic-confetti"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Send, Zap, Flame, Loader2, CheckCircle, XCircle } from "lucide-react"
+import { Flame, Zap, Loader2, CheckCircle, XCircle } from "lucide-react"
 import { useGameState } from "@/components/providers/game-state-provider"
 import { SpotifySearch } from "@/components/spotify-search"
 import { useRouter } from "next/navigation"
-import { celebrateCorrectAnswer } from "@/components/cosmic-confetti"
 import {
   AlertDialog,
   AlertDialogContent,
@@ -35,6 +35,33 @@ export default function CometRoom() {
   const [showSuccessDialog, setShowSuccessDialog] = useState(false)
   const [showFailureDialog, setShowFailureDialog] = useState(false)
   const [earnedPoints, setEarnedPoints] = useState(0)
+  const { sessionId, gameSession, refreshGameState } = useGameState()
+  const router = useRouter()
+
+  console.log('[Comet] Component mounted, session:', sessionId)import type React from "react"
+
+import { useState, useEffect } from "react"
+import { CosmicBackground } from "@/components/cosmic-background"
+import { ProgressTracker } from "@/components/progress-tracker"
+import { CelestialIcon } from "@/components/celestial-icon"
+import { Card } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Send, Zap, Flame, Loader2 } from "lucide-react"
+import { useGameState } from "@/components/providers/game-state-provider"
+import { SpotifySearch } from "@/components/spotify-search"
+import { useRouter } from "next/navigation"
+
+export default function CometRoom() {
+  const [timeLeft, setTimeLeft] = useState(10)
+  const [showLyric, setShowLyric] = useState(false)
+  const [showInput, setShowInput] = useState(false)
+  const [cometVisible, setCometVisible] = useState(false)
+  const [selectedTrack, setSelectedTrack] = useState<{id: string; name: string} | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isCompleted, setIsCompleted] = useState(false)
+  const [lyric, setLyric] = useState("")
+  const [clueText, setClueText] = useState("")
   const { sessionId, gameSession, refreshGameState } = useGameState()
   const router = useRouter()
 
@@ -114,21 +141,12 @@ export default function CometRoom() {
       console.log('[Comet] Guess result:', data)
 
       if (data.correct) {
-        // Trigger confetti celebration  
-        if (data.celebrateCorrect) {
-          celebrateCorrectAnswer()
-        }
-        
         setIsCompleted(true)
         setClueText(data.clue || '')
-        setEarnedPoints(data.points || 0)
-        setShowSuccessDialog(true)
+        alert(`✨ Correct! ${data.clue}`)
         await refreshGameState()
       } else {
-        // Comet only has ONE CHANCE - show failure
-        setIsCompleted(true)
-        setShowFailureDialog(true)
-        await refreshGameState()
+        alert(`❌ Not quite. ${data.attemptsRemaining} attempts remaining.`)
       }
     } catch (error) {
       console.error('[Comet] Guess failed:', error)
@@ -313,75 +331,6 @@ export default function CometRoom() {
           </div>
         </div>
       </div>
-
-      {/* Success Dialog */}
-      <AlertDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
-        <AlertDialogContent className="glassmorphism border-green-400/50">
-          <AlertDialogHeader>
-            <div className="flex justify-center mb-4">
-              <CheckCircle className="w-16 h-16 text-green-400" />
-            </div>
-            <AlertDialogTitle className="text-center text-2xl font-cinzel text-green-100">
-              Correct! 🎉
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-center space-y-4">
-              <p className="text-green-200 font-poppins">
-                You caught the comet's message!
-              </p>
-              <div className="bg-green-900/20 rounded-lg p-4 border border-green-400/30">
-                <p className="text-gold-200 font-bold text-xl">+{earnedPoints} Points</p>
-              </div>
-              {clueText && (
-                <p className="text-green-200 italic font-poppins text-sm">
-                  {clueText}
-                </p>
-              )}
-              <Button 
-                onClick={() => {
-                  setShowSuccessDialog(false)
-                  router.push('/home')
-                }}
-                className="mystical-button w-full mt-4"
-              >
-                Continue Journey
-              </Button>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Failure Dialog */}
-      <AlertDialog open={showFailureDialog} onOpenChange={setShowFailureDialog}>
-        <AlertDialogContent className="glassmorphism border-red-400/50">
-          <AlertDialogHeader>
-            <div className="flex justify-center mb-4">
-              <XCircle className="w-16 h-16 text-red-400" />
-            </div>
-            <AlertDialogTitle className="text-center text-2xl font-cinzel text-red-100">
-              Not Quite... 💫
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-center space-y-4">
-              <p className="text-red-200 font-poppins">
-                The comet has passed. You only had one chance!
-              </p>
-              <div className="bg-red-900/20 rounded-lg p-4 border border-red-400/30">
-                <p className="text-red-200 font-poppins text-sm">
-                  No points earned this time.
-                </p>
-              </div>
-              <Button 
-                onClick={() => {
-                  setShowFailureDialog(false)
-                  router.push('/home')
-                }}
-                className="mystical-button w-full mt-4"
-              >
-                Continue Journey
-              </Button>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   )
 }

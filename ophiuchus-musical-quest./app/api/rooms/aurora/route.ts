@@ -207,6 +207,7 @@ export async function POST(request: NextRequest) {
       feedback,
       points,
       clue: rewardClue,
+      celebrateCorrect: passed, // Trigger confetti when passed (score >= 7)
       attemptsRemaining: passed ? 0 : Math.max(0, 3 - currentAttempts)
     });
 

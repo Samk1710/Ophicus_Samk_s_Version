@@ -128,6 +128,7 @@ export async function POST(request: NextRequest) {
       clue: rewardClue,
       points: points,
       completed: true,
+      celebrateCorrect: isCorrect, // Trigger confetti on correct answer
       revealedSong: {
         id: intermediarySong.id,
         name: intermediarySong.name,

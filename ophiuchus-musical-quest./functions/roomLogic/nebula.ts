@@ -56,10 +56,14 @@ Return ONLY the clue text, nothing else.`;
   return penalty.trim();
 }
 
-export function checkNebulaGuess(guess: string, correctSong: ISong): boolean {
-  const normalizedGuess = guess.toLowerCase().trim().replace(/[^a-z0-9]/g, '');
-  const normalizedSong = correctSong.name.toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+export function checkNebulaGuess(guessedTrackId: string, correctSong: ISong): boolean {
+  // Compare Spotify IDs directly
+  console.log('[checkNebulaGuess] Comparing Spotify IDs:');
+  console.log('[checkNebulaGuess] Guessed ID:', guessedTrackId);
+  console.log('[checkNebulaGuess] Correct ID:', correctSong.id);
   
-  console.log('[checkNebulaGuess] Comparing:', normalizedGuess, 'vs', normalizedSong);
-  return normalizedGuess === normalizedSong;
+  const isCorrect = guessedTrackId === correctSong.id;
+  console.log('[checkNebulaGuess] Match:', isCorrect);
+  
+  return isCorrect;
 }

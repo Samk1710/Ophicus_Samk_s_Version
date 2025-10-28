@@ -108,20 +108,30 @@ export async function POST(request: NextRequest) {
     const score = scoreNovaAnswers(answers, questions);
     console.log('[POST /api/rooms/nova] Score:', score, '/', questions.length);
 
+    // Calculate points: 20 points per correct answer
+    const points = score * 20;
+    console.log('[POST /api/rooms/nova] Points awarded:', points);
+
     const reward = await generateNovaReward(gameSession.cosmicSong, score);
 
     await updateRoomCompletion(sessionId, 'nova', {
       clue: reward.content,
       score,
+      points: points,
       completed: true
     });
 
     console.log('[POST /api/rooms/nova] Room completed');
 
+    // Celebrate if they got perfect score
+    const isPerfect = score === questions.length;
+
     return NextResponse.json({
       success: true,
       score,
       totalQuestions: questions.length,
+      points,
+      celebrateCorrect: isPerfect, // Trigger confetti on perfect score
       reward
     });
 

@@ -6,13 +6,21 @@ import { useState, useEffect } from "react"
 import { CosmicBackground } from "@/components/cosmic-background"
 import { ProgressTracker } from "@/components/progress-tracker"
 import { CelestialIcon } from "@/components/celestial-icon"
+import { CosmicConfetti, celebrateCorrectAnswer } from "@/components/cosmic-confetti"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Send, MessageCircle, Globe, Loader2 } from "lucide-react"
+import { Send, MessageCircle, Globe, Loader2, CheckCircle } from "lucide-react"
 import { useGameState } from "@/components/providers/game-state-provider"
 import { SpotifySearch } from "@/components/spotify-search"
 import { useRouter } from "next/navigation"
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 interface Message {
   id: number
@@ -30,8 +38,11 @@ export default function CradleRoom() {
   const [isSending, setIsSending] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [questionsRemaining, setQuestionsRemaining] = useState(5)
+  const [attemptsRemaining, setAttemptsRemaining] = useState(3)
   const [isCompleted, setIsCompleted] = useState(false)
   const [clueText, setClueText] = useState("")
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false)
+  const [earnedPoints, setEarnedPoints] = useState(0)
   const { sessionId, gameSession, refreshGameState } = useGameState()
   const router = useRouter()
 
@@ -129,10 +140,7 @@ export default function CradleRoom() {
       setMessages(prev => [...prev, systemResponse])
       setQuestionsRemaining(data.questionsRemaining || 0)
 
-      if (data.questionsRemaining === 0) {
-        setShowGuessForm(true)
-        console.log('[Cradle] All questions used, time to guess!')
-      }
+      // No automatic showing of guess form - it's always visible
     } catch (error) {
       console.error('[Cradle] Failed to get answer:', error)
     } finally {
@@ -163,22 +171,34 @@ export default function CradleRoom() {
       console.log('[Cradle] Guess result:', data)
 
       if (data.correct) {
+        // Trigger confetti celebration
+        if (data.celebrateCorrect) {
+          celebrateCorrectAnswer()
+        }
+        
         setIsCompleted(true)
         setClueText(data.clue || '')
+        setEarnedPoints(data.points || 0)
+        setShowSuccessDialog(true)
+        
         setMessages(prev => [...prev, {
           id: prev.length + 1,
           type: "system",
-          content: `✨ Correct! The artist is ${data.correctArtist?.name}. ${data.clue}`,
+          content: `✨ Correct! The artist is ${data.correctArtist?.name}. You earned ${data.points} points! ${data.clue}`,
           timestamp: new Date()
         }])
         await refreshGameState()
       } else {
+        setAttemptsRemaining(data.attemptsRemaining || 0)
         setMessages(prev => [...prev, {
           id: prev.length + 1,
           type: "system",
           content: `❌ Not quite. ${data.attemptsRemaining} attempts remaining.`,
           timestamp: new Date()
         }])
+        
+        // Clear selection for next attempt
+        setSelectedArtist(null)
       }
     } catch (error) {
       console.error('[Cradle] Guess failed:', error)
@@ -269,22 +289,28 @@ export default function CradleRoom() {
 
               {/* Message Input */}
               <form onSubmit={handleSendMessage} className="p-4 border-t border-blue-400/30">
-                <div className="flex gap-2">
-                  <Input
-                    value={currentMessage}
-                    onChange={(e) => setCurrentMessage(e.target.value)}
-                    placeholder={questionsRemaining > 0 ? "Ask about the artist..." : "No questions remaining"}
-                    className="glassmorphism border-blue-400/30 text-blue-100 placeholder-blue-300/50"
-                    disabled={questionsRemaining === 0 || isSending || isCompleted}
-                  />
-                  <Button 
-                    type="submit" 
-                    className="mystical-button px-4"
-                    disabled={questionsRemaining === 0 || isSending || isCompleted}
-                  >
-                    <Send className="w-4 h-4" />
-                  </Button>
-                </div>
+                {questionsRemaining > 0 && !isCompleted ? (
+                  <div className="flex gap-2">
+                    <Input
+                      value={currentMessage}
+                      onChange={(e) => setCurrentMessage(e.target.value)}
+                      placeholder="Ask about the artist..."
+                      className="glassmorphism border-blue-400/30 text-blue-100 placeholder-blue-300/50"
+                      disabled={isSending}
+                    />
+                    <Button 
+                      type="submit" 
+                      className="mystical-button px-4"
+                      disabled={isSending}
+                    >
+                      <Send className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="text-center text-blue-300 font-poppins text-sm">
+                    {isCompleted ? 'Challenge completed!' : 'All questions used. Time to guess the artist!'}
+                  </p>
+                )}
               </form>
             </Card>
           </div>
@@ -297,65 +323,59 @@ export default function CradleRoom() {
                   <MessageCircle className="w-6 h-6 text-green-300" />
                 </div>
                 <h3 className="font-cormorant text-xl font-bold text-green-100">Reveal the Artist</h3>
+                <p className="font-poppins text-xs text-green-300 mt-2">
+                  Attempts: {attemptsRemaining}/3
+                </p>
               </div>
 
-              {questionsRemaining === 0 || isCompleted ? (
+              {/* Always show guess form, even before all questions are asked */}
+              {!isCompleted && attemptsRemaining > 0 ? (
                 <div className="space-y-4">
-                  {!isCompleted && (
-                    <>
-                      <p className="font-poppins text-sm text-green-200 text-center mb-3">
-                        Search and select the artist:
-                      </p>
-                      <SpotifySearch
-                        type="artist"
-                        onSelect={(artist: any) => {
-                          console.log('[Cradle] Artist selected:', artist)
-                          setSelectedArtist({
-                            id: artist.id,
-                            name: artist.name
-                          })
-                        }}
-                        placeholder="Search for the artist..."
-                      />
-                      
-                      {selectedArtist && (
-                        <div className="bg-green-900/20 rounded-lg p-3 border border-green-400/30">
-                          <p className="font-poppins text-sm text-green-200 text-center">
-                            Selected: <span className="font-bold text-gold-200">{selectedArtist.name}</span>
-                          </p>
-                        </div>
-                      )}
-                      
-                      <Button 
-                        onClick={handleArtistGuess}
-                        className="mystical-button w-full"
-                        disabled={!selectedArtist || isSubmitting}
-                      >
-                        {isSubmitting ? (
-                          <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Submitting...
-                          </>
-                        ) : (
-                          'Submit Guess'
-                        )}
-                      </Button>
-                    </>
-                  )}
+                  <p className="font-poppins text-sm text-green-200 text-center mb-3">
+                    Search and select the artist:
+                  </p>
+                  <SpotifySearch
+                    type="artist"
+                    onSelect={(artist: any) => {
+                      console.log('[Cradle] Artist selected:', artist)
+                      setSelectedArtist({
+                        id: artist.id,
+                        name: artist.name
+                      })
+                    }}
+                    placeholder="Search for the artist..."
+                  />
                   
-                  {isCompleted && clueText && (
-                    <div className="bg-green-900/20 rounded-lg p-4 border border-green-400/30">
-                      <p className="font-poppins text-sm text-green-200 italic text-center">
-                        {clueText}
+                  {selectedArtist && (
+                    <div className="bg-green-900/20 rounded-lg p-3 border border-green-400/30">
+                      <p className="font-poppins text-sm text-green-200 text-center">
+                        Selected: <span className="font-bold text-gold-200">{selectedArtist.name}</span>
                       </p>
                     </div>
                   )}
+                  
+                  <Button 
+                    onClick={handleArtistGuess}
+                    className="mystical-button w-full"
+                    disabled={!selectedArtist || isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Submitting...
+                      </>
+                    ) : (
+                      'Submit Guess'
+                    )}
+                  </Button>
                 </div>
-              ) : (
-                <p className="font-poppins text-sm text-green-200 text-center">
-                  Ask questions to learn about the artist, then make your guess.
-                </p>
-              )}
+              ) : isCompleted && clueText ? (
+                <div className="bg-green-900/20 rounded-lg p-4 border border-green-400/30">
+                  <p className="font-poppins text-sm text-green-200 italic text-center">
+                    {clueText}
+                  </p>
+                </div>
+              ) : null}
             </Card>
 
             {/* Hint Card */}
@@ -371,6 +391,42 @@ export default function CradleRoom() {
           </div>
         </div>
       </div>
+
+      {/* Success Dialog */}
+      <AlertDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+        <AlertDialogContent className="glassmorphism border-green-400/50">
+          <AlertDialogHeader>
+            <div className="flex justify-center mb-4">
+              <CheckCircle className="w-16 h-16 text-green-400" />
+            </div>
+            <AlertDialogTitle className="text-center text-2xl font-cinzel text-green-100">
+              Correct! 🎉
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center space-y-4">
+              <p className="text-green-200 font-poppins">
+                You've successfully identified the artist!
+              </p>
+              <div className="bg-green-900/20 rounded-lg p-4 border border-green-400/30">
+                <p className="text-gold-200 font-bold text-xl">+{earnedPoints} Points</p>
+              </div>
+              {clueText && (
+                <p className="text-green-200 italic font-poppins text-sm">
+                  {clueText}
+                </p>
+              )}
+              <Button 
+                onClick={() => {
+                  setShowSuccessDialog(false)
+                  router.push('/home')
+                }}
+                className="mystical-button w-full mt-4"
+              >
+                Continue Journey
+              </Button>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
