@@ -36,13 +36,13 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('🎯 [POST /api/final-guess] Cosmic Song:', {
-      id: result.session.cosmicSong.id,
-      name: result.session.cosmicSong.name,
-      artists: result.session.cosmicSong.artists
+      id: result.session.cosmicSong?.id,
+      name: result.session.cosmicSong?.name,
+      artists: result.session.cosmicSong?.artists
     });
     console.log('🤔 [POST /api/final-guess] User guessed ID:', guessedTrackId);
     console.log(result.correct ? '🎉 CORRECT!' : '❌ INCORRECT');
-    console.log(`📊 [POST /api/final-guess] Attempts used: ${result.session.finalGuesses}/2`);
+    console.log(`📊 [POST /api/final-guess] Attempts used: ${result.session.finalGuessAttempts}/2`);
 
     if (result.correct) {
       console.log('🌟 [POST /api/final-guess] Generating Ophiuchus identity...');
@@ -80,10 +80,10 @@ export async function POST(request: NextRequest) {
         correct: true,
         cosmicSong: result.session.cosmicSong,
         ophiuchusIdentity: parsedIdentity,
-        attemptsUsed: result.session.finalGuesses
+        attemptsUsed: result.session.finalGuessAttempts
       });
     } else {
-      const attemptsRemaining = 2 - result.session.finalGuesses;
+      const attemptsRemaining = 2 - result.session.finalGuessAttempts;
       console.log(`⚠️  [POST /api/final-guess] Attempts remaining: ${attemptsRemaining}/2`);
       
       if (attemptsRemaining === 0) {

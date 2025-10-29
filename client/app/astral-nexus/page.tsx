@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
 import { CosmicBackground } from "@/components/cosmic-background"
 import { ProgressTracker } from "@/components/progress-tracker"
+import { PointsWidget } from "@/components/points-widget"
 import { CelestialIcon } from "@/components/celestial-icon"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -54,16 +55,6 @@ const planets = [
     borderColor: "border-green-400/50",
     href: "/rooms/aurora",
   },
-  {
-    id: "nova",
-    name: "Nova",
-    subtitle: "Reverb of Memory",
-    description: "Navigate through your musical memories and preferences",
-    icon: <Star className="w-8 h-8 text-yellow-400" />,
-    color: "from-yellow-500/30 to-orange-600/30",
-    borderColor: "border-yellow-400/50",
-    href: "/rooms/nova",
-  },
 ]
 
 export default function AstralNexus() {
@@ -110,7 +101,13 @@ export default function AstralNexus() {
   // Get completed rooms from game session
   const completedRooms = gameSession?.roomClues
     ? Object.entries(gameSession.roomClues)
-        .filter(([_, clue]) => clue.completed)
+        .filter(([_, clue]) => clue.completed && (clue.score ?? 0) >= 7)
+        .map(([roomId]) => roomId)
+    : []
+
+  const failedRooms = gameSession?.roomClues
+    ? Object.entries(gameSession.roomClues)
+        .filter(([_, clue]) => clue.completed && (clue.score ?? 0) < 7)
         .map(([roomId]) => roomId)
     : []
 
@@ -119,7 +116,8 @@ export default function AstralNexus() {
   return (
     <div className="min-h-screen relative overflow-hidden cosmic-bg">
       <CosmicBackground />
-      <ProgressTracker completedRooms={completedRooms} />
+      <ProgressTracker completedRooms={completedRooms} failedRooms={failedRooms} />
+      <PointsWidget />
 
       {/* Big Bang Popup */}
       <BigBangPopup isOpen={showBigBangPopup} onClose={() => setShowBigBangPopup(false)} />
@@ -134,7 +132,7 @@ export default function AstralNexus() {
               <CelestialIcon type="mystical" size="xl" className="text-gold-400 ml-4" />
             </div>
             <p className="font-poppins text-lg text-purple-200 max-w-2xl mx-auto mb-8">
-              Five celestial chambers await your exploration. Each holds a piece of the cosmic puzzle that will reveal
+              Four celestial chambers await your exploration. Each holds a piece of the cosmic puzzle that will reveal
               your destined song among the stars.
             </p>
 
@@ -192,7 +190,7 @@ export default function AstralNexus() {
                   </p>
                   <div className="space-y-3">
                     <div className="font-poppins text-sm text-purple-300">
-                      Chambers Explored: {completedRooms.length} / 5
+                      Chambers Explored: {completedRooms.length} / 4
                     </div>
                     <Button 
                       onClick={() => setShowBigBangPopup(true)} 
@@ -272,7 +270,7 @@ export default function AstralNexus() {
                   <h3 className="font-cormorant text-xl font-bold text-gold-100">Cosmic Progress</h3>
                 </div>
                 <p className="font-poppins text-sm text-purple-200 mb-4">
-                  Chambers Explored: {completedRooms.length} / 5
+                  Chambers Explored: {completedRooms.length} / 4
                 </p>
                 <div className="flex justify-center gap-2 mb-4">
                   {planets.map((planet) => (
@@ -286,7 +284,7 @@ export default function AstralNexus() {
                     />
                   ))}
                 </div>
-                {completedRooms.length === 5 && (
+                {completedRooms.length === 4 && (
                   <div className="mt-4">
                     <Link href="/final-guess">
                       <Button className="mystical-button w-full">

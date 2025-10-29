@@ -4,7 +4,9 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import { CosmicBackground } from "@/components/cosmic-background"
+import { CosmicLoading } from "@/components/cosmic-loading"
 import { ProgressTracker } from "@/components/progress-tracker"
+import { PointsWidget } from "@/components/points-widget"
 import { CelestialIcon } from "@/components/celestial-icon"
 import { CosmicConfetti, celebrateCorrectAnswer } from "@/components/cosmic-confetti"
 import { Card } from "@/components/ui/card"
@@ -14,6 +16,7 @@ import { Send, MessageCircle, Globe, Loader2, CheckCircle, XCircle } from "lucid
 import { useGameState } from "@/components/providers/game-state-provider"
 import { SpotifySearch } from "@/components/spotify-search"
 import { useRouter } from "next/navigation"
+import { toast } from "sonner"
 import {
   AlertDialog,
   AlertDialogContent,
@@ -56,8 +59,21 @@ export default function CradleRoom() {
       router.push('/home')
       return
     }
+    
+    // Check if room is already completed - lock it
+    if (gameSession?.roomClues?.cradle?.completed) {
+      console.log('[Cradle] Room already completed, redirecting')
+      toast.error("Cradle Chamber Already Explored", {
+        description: "This cosmic chamber has already revealed its secrets.",
+        duration: 3000,
+        className: "glassmorphism border-blue-400/50"
+      })
+      router.push('/astral-nexus')
+      return
+    }
+    
     fetchInitialClue()
-  }, [sessionId])
+  }, [sessionId, gameSession])
 
   const fetchInitialClue = async () => {
     console.log('[Cradle] Fetching initial artist clue...')
@@ -213,22 +229,25 @@ export default function CradleRoom() {
 
   const completedRooms = gameSession?.roomClues
     ? Object.entries(gameSession.roomClues)
-        .filter(([_, clue]) => clue?.completed)
+        .filter(([_, clue]) => clue?.completed && (clue?.score ?? 0) >= 7)
+        .map(([roomId]) => roomId)
+    : []
+
+  const failedRooms = gameSession?.roomClues
+    ? Object.entries(gameSession.roomClues)
+        .filter(([_, clue]) => clue?.completed && (clue?.score ?? 0) < 7)
         .map(([roomId]) => roomId)
     : []
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
-      </div>
-    )
+    return <CosmicLoading message="The cradle awakens... whispers of creation echoing through eternity" />
   }
 
   return (
     <div className="min-h-screen relative overflow-hidden cosmic-bg">
       <CosmicBackground />
-      <ProgressTracker completedRooms={completedRooms} currentRoom="cradle" />
+      <ProgressTracker completedRooms={completedRooms} failedRooms={failedRooms} currentRoom="cradle" />
+      <PointsWidget />
 
       {/* Earth from Space Background */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">

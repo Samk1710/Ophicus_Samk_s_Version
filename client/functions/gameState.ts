@@ -87,14 +87,20 @@ export async function submitFinalGuess(
     return { correct: false, session: null };
   }
 
-  console.log('[submitFinalGuess] Cosmic Song ID:', session.cosmicSong.id);
-  console.log('[submitFinalGuess] Cosmic Song Name:', session.cosmicSong.name);
-  console.log('[submitFinalGuess] Comparing:', { guessedTrackId, correctId: session.cosmicSong.id });
+  console.log('[submitFinalGuess] Cosmic Song ID:', session.cosmicSong?.id);
+  console.log('[submitFinalGuess] Cosmic Song Name:', session.cosmicSong?.name);
+  console.log('[submitFinalGuess] Comparing:', { guessedTrackId, correctId: session.cosmicSong?.id });
+  
+  // Ensure cosmicSong and its ID exist
+  if (!session.cosmicSong || !session.cosmicSong.id) {
+    console.error('[submitFinalGuess] Cosmic song not found in session');
+    return { correct: false, session };
+  }
   
   // Compare track IDs directly
   const correct = guessedTrackId === session.cosmicSong.id;
   
-  session.finalGuesses += 1;
+  session.finalGuessAttempts = (session.finalGuessAttempts || 0) + 1;
   
   if (correct) {
     session.completed = true;
@@ -103,7 +109,7 @@ export async function submitFinalGuess(
     console.log('[submitFinalGuess] ❌ INCORRECT! IDs do not match');
     console.log('[submitFinalGuess] Expected:', session.cosmicSong.id);
     console.log('[submitFinalGuess] Got:', guessedTrackId);
-    console.log('[submitFinalGuess] Attempts:', session.finalGuesses);
+    console.log('[submitFinalGuess] Attempts:', session.finalGuessAttempts);
   }
 
   await session.save();

@@ -2,10 +2,11 @@
 
 import Link from "next/link"
 import { CelestialIcon } from "@/components/celestial-icon"
-import { CheckCircle, Globe, Flame, Rainbow, Star, Crown } from "lucide-react"
+import { CheckCircle, XCircle, Globe, Flame, Rainbow, Crown } from "lucide-react"
 
 interface ProgressTrackerProps {
   completedRooms: string[]
+  failedRooms?: string[]
   currentRoom?: string
 }
 
@@ -19,10 +20,9 @@ const rooms = [
   { id: "cradle", name: "Cradle", icon: <Globe className="w-4 h-4 text-blue-400" />, href: "/rooms/cradle" },
   { id: "comet", name: "Comet", icon: <Flame className="w-4 h-4 text-orange-400" />, href: "/rooms/comet" },
   { id: "aurora", name: "Aurora", icon: <Rainbow className="w-4 h-4 text-green-400" />, href: "/rooms/aurora" },
-  { id: "nova", name: "Nova", icon: <Star className="w-4 h-4 text-yellow-400" />, href: "/rooms/nova" },
 ]
 
-export function ProgressTracker({ completedRooms, currentRoom }: ProgressTrackerProps) {
+export function ProgressTracker({ completedRooms, failedRooms = [], currentRoom }: ProgressTrackerProps) {
   return (
     <div className="fixed top-20 right-6 z-50">
       <div className="glassmorphism rounded-2xl p-4">
@@ -37,13 +37,21 @@ export function ProgressTracker({ completedRooms, currentRoom }: ProgressTracker
                 className={`w-8 h-8 rounded-full flex items-center justify-center text-xs transition-all duration-300 cursor-pointer hover:scale-110 ${
                   completedRooms.includes(room.id)
                     ? "bg-green-500/30 border border-green-400/50 text-green-300"
-                    : currentRoom === room.id
-                      ? "bg-purple-500/30 border border-purple-400/50 text-purple-300 pulse-glow"
-                      : "bg-gray-700/30 border border-gray-600/50 text-gray-400 hover:bg-gray-600/40"
+                    : failedRooms.includes(room.id)
+                      ? "bg-red-500/30 border border-red-400/50 text-red-300"
+                      : currentRoom === room.id
+                        ? "bg-purple-500/30 border border-purple-400/50 text-purple-300 pulse-glow"
+                        : "bg-gray-700/30 border border-gray-600/50 text-gray-400 hover:bg-gray-600/40"
                 }`}
                 title={room.name}
               >
-                {completedRooms.includes(room.id) ? <CheckCircle className="w-4 h-4" /> : room.icon}
+                {completedRooms.includes(room.id) ? (
+                  <CheckCircle className="w-4 h-4" />
+                ) : failedRooms.includes(room.id) ? (
+                  <XCircle className="w-4 h-4" />
+                ) : (
+                  room.icon
+                )}
               </div>
             </Link>
           ))}

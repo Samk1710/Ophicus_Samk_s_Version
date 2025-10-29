@@ -4,7 +4,9 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import { CosmicBackground } from "@/components/cosmic-background"
+import { CosmicLoading } from "@/components/cosmic-loading"
 import { ProgressTracker } from "@/components/progress-tracker"
+import { PointsWidget } from "@/components/points-widget"
 import { CelestialIcon } from "@/components/celestial-icon"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -13,6 +15,7 @@ import Link from "next/link"
 import { useGameState } from "@/components/providers/game-state-provider"
 import { SpotifySearch } from "@/components/spotify-search"
 import { useRouter } from "next/navigation"
+import { toast } from "sonner"
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction } from "@/components/ui/alert-dialog"
 import { celebrateCorrectAnswer } from "@/components/cosmic-confetti"
 
@@ -41,8 +44,21 @@ export default function NebulaRoom() {
       router.push('/home')
       return
     }
+    
+    // Check if room is already completed - lock it
+    if (gameSession?.roomClues?.nebula?.completed) {
+      console.log('[Nebula] Room already completed, redirecting')
+      toast.error("Nebula Chamber Already Explored", {
+        description: "This cosmic chamber has already revealed its secrets.",
+        duration: 3000,
+        className: "glassmorphism border-purple-400/50"
+      })
+      router.push('/astral-nexus')
+      return
+    }
+    
     fetchRiddle()
-  }, [sessionId])
+  }, [sessionId, gameSession])
 
   const fetchRiddle = async () => {
     console.log('[Nebula] Fetching riddle...')
@@ -122,22 +138,25 @@ export default function NebulaRoom() {
   // Get completed rooms for progress tracker
   const completedRooms = gameSession?.roomClues
     ? Object.entries(gameSession.roomClues)
-        .filter(([_, clue]) => clue?.completed)
+        .filter(([_, clue]) => clue?.completed && (clue?.score ?? 0) >= 7)
+        .map(([roomId]) => roomId)
+    : []
+
+  const failedRooms = gameSession?.roomClues
+    ? Object.entries(gameSession.roomClues)
+        .filter(([_, clue]) => clue?.completed && (clue?.score ?? 0) < 7)
         .map(([roomId]) => roomId)
     : []
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-purple-400" />
-      </div>
-    )
+    return <CosmicLoading message="The nebula stirs... ancient riddles awakening from cosmic slumber" />
   }
 
   return (
     <div className="min-h-screen relative overflow-hidden cosmic-bg">
       <CosmicBackground />
-      <ProgressTracker completedRooms={completedRooms} currentRoom="nebula" />
+      <ProgressTracker completedRooms={completedRooms} failedRooms={failedRooms} currentRoom="nebula" />
+      <PointsWidget />
 
       {/* Moon Phases Background */}
       <div

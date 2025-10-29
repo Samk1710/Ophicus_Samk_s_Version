@@ -4,7 +4,9 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import { CosmicBackground } from "@/components/cosmic-background"
+import { CosmicLoading } from "@/components/cosmic-loading"
 import { ProgressTracker } from "@/components/progress-tracker"
+import { PointsWidget } from "@/components/points-widget"
 import { CelestialIcon } from "@/components/celestial-icon"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -12,6 +14,7 @@ import { Send, Zap, Flame, Loader2, CheckCircle, XCircle } from "lucide-react"
 import { useGameState } from "@/components/providers/game-state-provider"
 import { SpotifySearch } from "@/components/spotify-search"
 import { useRouter } from "next/navigation"
+import { toast } from "sonner"
 import { celebrateCorrectAnswer } from "@/components/cosmic-confetti"
 import {
   AlertDialog,
@@ -46,8 +49,21 @@ export default function CometRoom() {
       router.push('/home')
       return
     }
+    
+    // Check if room is already completed - lock it
+    if (gameSession?.roomClues?.comet?.completed) {
+      console.log('[Comet] Room already completed, redirecting')
+      toast.error("Comet Chamber Already Explored", {
+        description: "This cosmic chamber has already revealed its secrets.",
+        duration: 3000,
+        className: "glassmorphism border-orange-400/50"
+      })
+      router.push('/astral-nexus')
+      return
+    }
+    
     fetchLyric()
-  }, [sessionId])
+  }, [sessionId, gameSession])
 
   const fetchLyric = async () => {
     console.log('[Comet] Fetching lyric fragment...')
@@ -140,22 +156,25 @@ export default function CometRoom() {
 
   const completedRooms = gameSession?.roomClues
     ? Object.entries(gameSession.roomClues)
-        .filter(([_, clue]) => clue?.completed)
+        .filter(([_, clue]) => clue?.completed && (clue?.score ?? 0) >= 7)
+        .map(([roomId]) => roomId)
+    : []
+
+  const failedRooms = gameSession?.roomClues
+    ? Object.entries(gameSession.roomClues)
+        .filter(([_, clue]) => clue?.completed && (clue?.score ?? 0) < 7)
         .map(([roomId]) => roomId)
     : []
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-orange-400" />
-      </div>
-    )
+    return <CosmicLoading message="The comet streaks across the void... catch its fleeting secrets" />
   }
 
   return (
     <div className="min-h-screen relative overflow-hidden cosmic-bg">
       <CosmicBackground />
-      <ProgressTracker completedRooms={completedRooms} currentRoom="comet" />
+      <ProgressTracker completedRooms={completedRooms} failedRooms={failedRooms} currentRoom="comet" />
+      <PointsWidget />
 
       {/* Comet Trail Animation */}
       {cometVisible && (

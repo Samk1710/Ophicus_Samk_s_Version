@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useState, useRef, useEffect } from "react"
 import { CosmicBackground } from "@/components/cosmic-background"
+import { CosmicLoading } from "@/components/cosmic-loading"
 import { ProgressTracker } from "@/components/progress-tracker"
 import { PointsWidget } from "@/components/points-widget"
 import { CelestialIcon } from "@/components/celestial-icon"
@@ -187,22 +188,24 @@ export default function AuroraRoom() {
 
   const completedRooms = gameSession?.roomClues
     ? Object.entries(gameSession.roomClues)
-        .filter(([_, clue]) => clue?.completed)
+        .filter(([_, clue]) => clue?.completed && (clue?.score ?? 0) >= 7)
+        .map(([roomId]) => roomId)
+    : []
+
+  const failedRooms = gameSession?.roomClues
+    ? Object.entries(gameSession.roomClues)
+        .filter(([_, clue]) => clue?.completed && (clue?.score ?? 0) < 7)
         .map(([roomId]) => roomId)
     : []
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-green-400" />
-      </div>
-    )
+    return <CosmicLoading message="Aurora awakens... feel the light dancing through the void" />
   }
 
   return (
     <div className="min-h-screen relative overflow-hidden cosmic-bg">
       <CosmicBackground />
-      <ProgressTracker completedRooms={completedRooms} currentRoom="aurora" />
+      <ProgressTracker completedRooms={completedRooms} failedRooms={failedRooms} currentRoom="aurora" />
       <PointsWidget />
 
       {/* Success Dialog */}
