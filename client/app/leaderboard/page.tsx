@@ -7,19 +7,20 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Trophy, Star, Loader2, ChevronLeft, ChevronRight, Crown } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { motion } from "framer-motion"
 
 interface LeaderboardEntry {
   rank: number
   username: string
   totalPoints: number
-  totalGamesPlayed: number
+  totalGamesCompleted: number
   isCurrentUser: boolean
 }
 
 interface CurrentUser {
   username: string
   totalPoints: number
-  totalGamesPlayed: number
+  totalGamesCompleted: number
   rank: number
 }
 
@@ -87,9 +88,19 @@ export default function LeaderboardPage() {
             </Button>
           </div>
 
-          <div className="text-center mb-12">
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="text-center mb-12"
+          >
             <div className="flex items-center justify-center mb-4">
-              <Trophy className="w-10 h-10 text-gold-400 mr-4" />
+              <motion.div
+                animate={{ rotate: [0, 10, -10, 0] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              >
+                <Trophy className="w-10 h-10 text-gold-400 mr-4" />
+              </motion.div>
               <h1 className="font-cinzel text-5xl font-bold glow-text text-gold-100">
                 Cosmic Leaderboard
               </h1>
@@ -98,11 +109,16 @@ export default function LeaderboardPage() {
             <p className="font-poppins text-lg text-purple-300 italic">
               The Greatest Constellation Seekers
             </p>
-          </div>
+          </motion.div>
 
           {/* Current User Card */}
           {currentUser && (
-            <Card className="glassmorphism border-gold-400/50 p-6 mb-8 pulse-glow">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              <Card className="glassmorphism border-gold-400/50 p-6 mb-8 pulse-glow">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className="w-16 h-16 rounded-full bg-gradient-to-br from-gold-500/30 to-amber-600/30 flex items-center justify-center border-2 border-gold-400/50">
@@ -114,7 +130,7 @@ export default function LeaderboardPage() {
                       {currentUser.username}
                     </h3>
                     <p className="font-poppins text-sm text-purple-300">
-                      {currentUser.totalGamesPlayed} {currentUser.totalGamesPlayed === 1 ? 'Quest' : 'Quests'} Completed
+                      {currentUser.totalGamesCompleted} {currentUser.totalGamesCompleted === 1 ? 'Quest' : 'Quests'} Completed
                     </p>
                   </div>
                 </div>
@@ -128,6 +144,7 @@ export default function LeaderboardPage() {
                 </div>
               </div>
             </Card>
+            </motion.div>
           )}
 
           {/* Leaderboard List */}
@@ -137,8 +154,14 @@ export default function LeaderboardPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {leaderboard.map((entry) => (
-                <Card 
+              {leaderboard.map((entry, index) => (
+                <motion.div
+                  key={entry.rank}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                >
+                  <Card 
                   key={entry.rank}
                   className={`glassmorphism p-6 transition-all hover:scale-[1.02] ${
                     entry.isCurrentUser 
@@ -166,7 +189,7 @@ export default function LeaderboardPage() {
                           )}
                         </div>
                         <p className="font-poppins text-sm text-purple-300">
-                          {entry.totalGamesPlayed} {entry.totalGamesPlayed === 1 ? 'quest' : 'quests'}
+                          {entry.totalGamesCompleted} {entry.totalGamesCompleted === 1 ? 'quest' : 'quests'}
                         </p>
                       </div>
                     </div>
@@ -182,6 +205,7 @@ export default function LeaderboardPage() {
                     </div>
                   </div>
                 </Card>
+                </motion.div>
               ))}
             </div>
           )}

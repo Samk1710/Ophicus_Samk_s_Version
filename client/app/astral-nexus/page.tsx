@@ -138,7 +138,10 @@ export default function AstralNexus() {
   return (
     <div className="min-h-screen relative overflow-hidden cosmic-bg">
       <CosmicBackground />
-      <ProgressTracker completedRooms={completedRooms} failedRooms={failedRooms} />
+      {/* Only show progress tracker if there's an active session */}
+      {sessionId && gameSession && (
+        <ProgressTracker completedRooms={completedRooms} failedRooms={failedRooms} />
+      )}
 
       {/* Confirmation Popup for ending session */}
       <AlertDialog open={showConfirmEndSession} onOpenChange={setShowConfirmEndSession}>

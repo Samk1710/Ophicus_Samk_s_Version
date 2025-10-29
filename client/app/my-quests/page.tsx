@@ -20,7 +20,7 @@ interface CompletedQuest {
     artists: string[]
     imageUrl?: string
   }
-  ophiuchusIdentity: {
+  ophiuchusIdentity?: {
     title: string
     description?: string
     imageUrl?: string
@@ -177,20 +177,34 @@ export default function MyQuestsPage() {
                           </div>
                         </div>
 
-                        {/* Ophiuchus Identity */}
-                        <div className="bg-purple-900/20 rounded-lg p-4 border border-purple-400/20">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Crown className="w-4 h-4 text-gold-400" />
-                            <p className="font-cinzel text-lg font-bold text-purple-100">
-                              {quest.ophiuchusIdentity.title}
-                            </p>
+                        {/* Ophiuchus Identity - Only show if quest was successful */}
+                        {quest.ophiuchusIdentity && (
+                          <div className="bg-purple-900/20 rounded-lg p-4 border border-purple-400/20">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Crown className="w-4 h-4 text-gold-400" />
+                              <p className="font-cinzel text-lg font-bold text-purple-100">
+                                {quest.ophiuchusIdentity.title}
+                              </p>
+                            </div>
+                            {quest.ophiuchusIdentity.description && expandedQuest === quest._id && (
+                              <p className="font-poppins text-sm text-purple-300 mt-2 italic">
+                                {quest.ophiuchusIdentity.description}
+                              </p>
+                            )}
                           </div>
-                          {quest.ophiuchusIdentity.description && expandedQuest === quest._id && (
-                            <p className="font-poppins text-sm text-purple-300 mt-2 italic">
-                              {quest.ophiuchusIdentity.description}
-                            </p>
-                          )}
-                        </div>
+                        )}
+                        
+                        {/* Failed Quest Badge */}
+                        {!quest.ophiuchusIdentity && (
+                          <div className="bg-red-900/20 rounded-lg p-4 border border-red-400/20">
+                            <div className="flex items-center gap-2">
+                              <Trophy className="w-4 h-4 text-red-400" />
+                              <p className="font-poppins text-sm text-red-300">
+                                Quest Failed - But you earned {quest.revelationPoints} consolation points!
+                              </p>
+                            </div>
+                          </div>
+                        )}
 
                         {/* Room Points Preview */}
                         <div className="flex items-center gap-2 flex-wrap">
