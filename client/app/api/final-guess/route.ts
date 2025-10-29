@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { submitFinalGuess, setOphiuchusIdentity } from '@/functions/gameState';
 import { generateOphiuchusIdentity } from '@/functions/bigbang';
+import { completeGameSession } from '@/functions/leaderboard';
 
 export async function POST(request: NextRequest) {
   console.log('\n' + '🎯 FINAL GUESS - COSMIC SONG REVELATION'.padEnd(80, '='));
@@ -47,6 +48,18 @@ export async function POST(request: NextRequest) {
     if (result.correct) {
       console.log('🌟 [POST /api/final-guess] Generating Ophiuchus identity...');
       
+      // Calculate points based on attempts (300, 200, 100)
+      const attemptPoints = result.session.finalGuessAttempts === 1 ? 300 
+                          : result.session.finalGuessAttempts === 2 ? 200 
+                          : 100;
+      
+      // Add revelation points to total
+      result.session.totalPoints = (result.session.totalPoints || 0) + attemptPoints;
+      await result.session.save();
+      
+      console.log(`🎯 [POST /api/final-guess] Revelation points awarded: ${attemptPoints} (attempt ${result.session.finalGuessAttempts})`);
+      console.log(`📊 [POST /api/final-guess] New total points: ${result.session.totalPoints}`);
+      
       const musicProfile = `User has completed ${result.session.roomsCompleted.length} cosmic chambers. Their journey led them to discover their cosmic song: "${result.session.cosmicSong.name}" by ${result.session.cosmicSong.artists.join(', ')}.`;
       console.log('📝 [POST /api/final-guess] Music profile:', musicProfile);
       
@@ -58,36 +71,77 @@ export async function POST(request: NextRequest) {
       const genTime = Date.now() - startTime;
 
       console.log(`✅ [POST /api/final-guess] Ophiuchus identity generated in ${genTime}ms`);
+      console.log('👑 [POST /api/final-guess] Title:', identity.title);
+      console.log('📜 [POST /api/final-guess] Description:', identity.description?.substring(0, 100) + '...');
       
-      // Parse identity if it's a string
-      const parsedIdentity = typeof identity === 'string' ? JSON.parse(identity) : identity;
-      console.log('👑 [POST /api/final-guess] Title:', parsedIdentity.title);
-      console.log('📜 [POST /api/final-guess] Description:', parsedIdentity.description?.substring(0, 100) + '...');
-      
-      if (parsedIdentity.imageUrl) {
-        console.log('🖼️  [POST /api/final-guess] Image URL:', parsedIdentity.imageUrl);
+      if (identity.imageUrl) {
+        console.log('🖼️  [POST /api/final-guess] Image URL:', identity.imageUrl);
       }
 
-      await setOphiuchusIdentity(sessionId, typeof identity === 'string' ? identity : JSON.stringify(identity));
+      // Save identity object directly to database
+      await setOphiuchusIdentity(sessionId, identity);
       console.log('💾 [POST /api/final-guess] Identity saved to database');
 
       console.log('='.repeat(80));
       console.log('🎊 QUEST COMPLETE! User has achieved cosmic enlightenment!');
       console.log('='.repeat(80) + '\n');
 
+      // Mark session as completed but DON'T delete it yet
+      try {
+        result.session.completed = true;
+        await result.session.save();
+        console.log('✅ [POST /api/final-guess] Game session marked as completed');
+        
+        // Archive to leaderboard but keep session in DB for now
+        await completeGameSession(sessionId);
+        console.log('✅ [POST /api/final-guess] Game session archived to leaderboard');
+      } catch (error) {
+        console.error('❌ [POST /api/final-guess] Failed to complete game session:', error);
+        // Continue anyway - user still gets success response
+      }
+
       return NextResponse.json({
         success: true,
         correct: true,
         cosmicSong: result.session.cosmicSong,
-        ophiuchusIdentity: parsedIdentity,
-        attemptsUsed: result.session.finalGuessAttempts
+        ophiuchusIdentity: identity,
+        attemptsUsed: result.session.finalGuessAttempts,
+        pointsEarned: attemptPoints,
+        totalPoints: result.session.totalPoints,
+        questSummary: {
+          cosmicSong: result.session.cosmicSong,
+          ophiuchusIdentity: identity,
+          roomPoints: result.session.roomPoints,
+          revelationPoints: attemptPoints,
+          totalPoints: result.session.totalPoints,
+          finalGuessAttempts: result.session.finalGuessAttempts
+        }
       });
     } else {
-      const attemptsRemaining = 2 - result.session.finalGuessAttempts;
-      console.log(`⚠️  [POST /api/final-guess] Attempts remaining: ${attemptsRemaining}/2`);
+      const attemptsRemaining = 3 - result.session.finalGuessAttempts;
+      console.log(`⚠️  [POST /api/final-guess] Attempts remaining: ${attemptsRemaining}/3`);
+      
+      let pointsEarned = 0;
       
       if (attemptsRemaining === 0) {
         console.log('💔 [POST /api/final-guess] GAME OVER - All attempts exhausted');
+        
+        // Award 25 points for trying
+        pointsEarned = 25;
+        result.session.totalPoints = (result.session.totalPoints || 0) + pointsEarned;
+        
+        console.log(`🎁 [POST /api/final-guess] Consolation points awarded: ${pointsEarned}`);
+        console.log(`📊 [POST /api/final-guess] Final total points: ${result.session.totalPoints}`);
+        
+        // Mark session as completed (failed) and archive it
+        try {
+          result.session.completed = true; // Mark as completed even though they failed
+          await result.session.save();
+          await completeGameSession(sessionId);
+          console.log('✅ [POST /api/final-guess] Failed game session archived');
+        } catch (error) {
+          console.error('❌ [POST /api/final-guess] Failed to archive game session:', error);
+        }
       }
       
       console.log('='.repeat(80) + '\n');
@@ -96,7 +150,9 @@ export async function POST(request: NextRequest) {
         success: true,
         correct: false,
         attemptsRemaining,
-        gameOver: attemptsRemaining === 0
+        gameOver: attemptsRemaining === 0,
+        pointsEarned,
+        totalPoints: result.session.totalPoints
       });
     }
 

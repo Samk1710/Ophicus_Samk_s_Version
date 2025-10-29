@@ -6,7 +6,6 @@ import { useState, useEffect } from "react"
 import { CosmicBackground } from "@/components/cosmic-background"
 import { CosmicLoading } from "@/components/cosmic-loading"
 import { ProgressTracker } from "@/components/progress-tracker"
-import { PointsWidget } from "@/components/points-widget"
 import { CelestialIcon } from "@/components/celestial-icon"
 import { CosmicConfetti, celebrateCorrectAnswer } from "@/components/cosmic-confetti"
 import { Card } from "@/components/ui/card"
@@ -55,8 +54,7 @@ export default function CradleRoom() {
 
   useEffect(() => {
     if (!sessionId) {
-      console.log('[Cradle] No session ID, redirecting')
-      router.push('/home')
+      console.log('[Cradle] No session ID yet, waiting...')
       return
     }
     
@@ -229,13 +227,13 @@ export default function CradleRoom() {
 
   const completedRooms = gameSession?.roomClues
     ? Object.entries(gameSession.roomClues)
-        .filter(([_, clue]) => clue?.completed && (clue?.score ?? 0) >= 7)
+        .filter(([_, clue]) => clue?.completed && (clue?.points ?? 0) > 0)
         .map(([roomId]) => roomId)
     : []
 
   const failedRooms = gameSession?.roomClues
     ? Object.entries(gameSession.roomClues)
-        .filter(([_, clue]) => clue?.completed && (clue?.score ?? 0) < 7)
+        .filter(([_, clue]) => clue?.completed && (clue?.points ?? 0) === 0)
         .map(([roomId]) => roomId)
     : []
 
@@ -247,7 +245,6 @@ export default function CradleRoom() {
     <div className="min-h-screen relative overflow-hidden cosmic-bg">
       <CosmicBackground />
       <ProgressTracker completedRooms={completedRooms} failedRooms={failedRooms} currentRoom="cradle" />
-      <PointsWidget />
 
       {/* Earth from Space Background */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">

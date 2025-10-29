@@ -32,8 +32,7 @@ export default function NovaRoom() {
 
   useEffect(() => {
     if (!sessionId) {
-      console.log('[Nova] No session ID, redirecting')
-      router.push('/home')
+      console.log('[Nova] No session ID yet, waiting...')
       return
     }
     fetchQuestions()
@@ -126,7 +125,13 @@ export default function NovaRoom() {
 
   const completedRooms = gameSession?.roomClues
     ? Object.entries(gameSession.roomClues)
-        .filter(([_, clue]) => clue?.completed)
+        .filter(([_, clue]) => clue?.completed && (clue?.points ?? 0) > 0)
+        .map(([roomId]) => roomId)
+    : []
+
+  const failedRooms = gameSession?.roomClues
+    ? Object.entries(gameSession.roomClues)
+        .filter(([_, clue]) => clue?.completed && (clue?.points ?? 0) === 0)
         .map(([roomId]) => roomId)
     : []
 

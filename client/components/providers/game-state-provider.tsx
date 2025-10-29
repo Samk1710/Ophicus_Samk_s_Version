@@ -1,9 +1,10 @@
 "use client"
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { ReactNode } from 'react';
+import { create } from 'zustand';
 import { IGameSession } from '@/lib/models/GameSession';
 
-interface GameStateContextType {
+interface GameState {
   sessionId: string | null;
   gameSession: Partial<IGameSession> | null;
   loading: boolean;
@@ -11,148 +12,103 @@ interface GameStateContextType {
   initializeBigBang: () => Promise<void>;
   refreshGameState: () => Promise<void>;
   updateRoomProgress: (roomName: string) => void;
+  setSessionId: (sessionId: string | null) => void;
 }
 
-const GameStateContext = createContext<GameStateContextType | undefined>(undefined);
+export const useGameState = create<GameState>((set: (partial: Partial<GameState>) => void, get: () => GameState) => ({
+  sessionId: typeof window !== 'undefined' ? localStorage.getItem('gameSessionId') : null,
+  gameSession: null,
+  loading: false,
+  error: null,
 
-export function GameStateProvider({ children }: { children: ReactNode }) {
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [gameSession, setGameSession] = useState<Partial<IGameSession> | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  setSessionId: (sessionId: string | null) => {
+    set({ sessionId });
+    if (sessionId) {
+      localStorage.setItem('gameSessionId', sessionId);
+    } else {
+      localStorage.removeItem('gameSessionId');
+    }
+  },
 
-  // Load session ID from localStorage on mount and check if active
-  useEffect(() => {
-    const checkActiveSession = async () => {
-      const savedSessionId = localStorage.getItem('gameSessionId');
-      if (savedSessionId) {
-        console.log('[GameStateProvider] Found saved session:', savedSessionId);
-        
-        // Check if session still exists in DB
-        try {
-          const response = await fetch(`/api/game/${savedSessionId}`);
-          if (response.ok) {
-            const data = await response.json();
-            if (data.session && !data.session.completed) {
-              setSessionId(savedSessionId);
-              setGameSession(data.session);
-            } else {
-              // Session completed or doesn't exist, clear it
-              console.log('[GameStateProvider] Session completed or not found, clearing');
-              localStorage.removeItem('gameSessionId');
-              setSessionId(null);
-              setGameSession(null);
-            }
-          } else {
-            // Session doesn't exist, clear localStorage
-            localStorage.removeItem('gameSessionId');
-            setSessionId(null);
-          }
-        } catch (error) {
-          console.error('[GameStateProvider] Error checking session:', error);
-          // On error, keep the session ID but mark as error
-          setError('Failed to check session status');
-        }
-      }
-    };
-    
-    checkActiveSession();
-  }, []);
-
-  const initializeBigBang = async () => {
-    console.log('[GameStateProvider] Initializing Big Bang');
-    setLoading(true);
-    setError(null);
+  initializeBigBang: async () => {
+    console.log('[GameState] Initializing Big Bang');
+    set({ loading: true, error: null });
 
     try {
       const response = await fetch('/api/bigbang', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
       });
-
       const data = await response.json();
 
       if (!response.ok) {
         throw new Error(data.error || 'Failed to initialize Big Bang');
       }
 
-      console.log('[GameStateProvider] Big Bang initialized:', data.sessionId);
-      setSessionId(data.sessionId);
-      localStorage.setItem('gameSessionId', data.sessionId);
-
-      // Fetch full game state
-      await refreshGameState(data.sessionId);
-
+      console.log('[GameState] Big Bang initialized:', data.sessionId);
+      get().setSessionId(data.sessionId);
+      await get().refreshGameState();
     } catch (err) {
-      console.error('[GameStateProvider] Big Bang error:', err);
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      console.error('[GameState] Big Bang error:', err);
+      set({ error: err instanceof Error ? err.message : 'Unknown error' });
     } finally {
-      setLoading(false);
+      set({ loading: false });
     }
-  };
+  },
 
-  const refreshGameState = async (sid?: string) => {
-    const targetSessionId = sid || sessionId;
-    if (!targetSessionId) {
-      console.log('[GameStateProvider] No session ID to refresh');
+  refreshGameState: async () => {
+    const sessionId = get().sessionId;
+    if (!sessionId) {
+      console.log('[GameState] No session ID to refresh');
       return;
     }
 
-    console.log('[GameStateProvider] Refreshing game state:', targetSessionId);
-    setLoading(true);
+    console.log('[GameState] Refreshing game state:', sessionId);
+    set({ loading: true });
 
     try {
-      const response = await fetch(`/api/game/${targetSessionId}`);
+      const response = await fetch(`/api/game/${sessionId}`);
       const data = await response.json();
 
       if (!response.ok) {
         throw new Error(data.error || 'Failed to fetch game state');
       }
 
-      console.log('[GameStateProvider] Game state loaded:', data.session);
-      setGameSession(data.session);
-
+      console.log('[GameState] Game state loaded:', data.session);
+      set({ gameSession: data.session });
     } catch (err) {
-      console.error('[GameStateProvider] Refresh error:', err);
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      console.error('[GameState] Refresh error:', err);
+      set({ error: err instanceof Error ? err.message : 'Unknown error' });
     } finally {
-      setLoading(false);
+      set({ loading: false });
     }
-  };
+  },
 
-  const updateRoomProgress = (roomName: string) => {
-    console.log('[GameStateProvider] Updating room progress:', roomName);
+  updateRoomProgress: (roomName: string) => {
+    console.log('[GameState] Updating room progress:', roomName);
+    const gameSession = get().gameSession;
     if (gameSession) {
-      setGameSession({
-        ...gameSession,
-        roomsCompleted: [...(gameSession.roomsCompleted || []), roomName]
+      set({
+        gameSession: {
+          ...gameSession,
+          roomsCompleted: [...(gameSession.roomsCompleted || []), roomName],
+        },
       });
     }
-  };
+  },
+}));
 
-  return (
-    <GameStateContext.Provider
-      value={{
-        sessionId,
-        gameSession,
-        loading,
-        error,
-        initializeBigBang,
-        refreshGameState,
-        updateRoomProgress,
-      }}
-    >
-      {children}
-    </GameStateContext.Provider>
-  );
+// Initialize session on load
+if (typeof window !== 'undefined') {
+  const sessionId = localStorage.getItem('gameSessionId');
+  if (sessionId) {
+    console.log('[GameState] Found saved session:', sessionId);
+    useGameState.getState().refreshGameState();
+  }
 }
 
-export function useGameState() {
-  const context = useContext(GameStateContext);
-  if (context === undefined) {
-    throw new Error('useGameState must be used within a GameStateProvider');
-  }
-  return context;
+export function GameStateProvider({ children }: { children: ReactNode }) {
+  return (
+    <>{children}</>
+  );
 }

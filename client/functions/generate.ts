@@ -9,38 +9,19 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyANqqfDccgTgAR0YEEKuT
 export const generate = async (prompt: string) => {
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     
-    // Try with gemini-2.0-flash first, fallback to gemini-1.5-flash if overloaded
-    const models = ["gemini-2.0-flash", "gemini-1.5-flash"];
-    let lastError = null;
-    
-    for (const modelName of models) {
-        try {
-            console.log(`[generate] Attempting with model: ${modelName}`);
-            const model = genAI.getGenerativeModel({ model: modelName });
-            const result = await model.generateContent(prompt);
-            const response = result.response;
-            const text = response.text();
-            console.log(`[generate] Success with ${modelName}`);
-            return text;
-        } catch (error) {
-            console.error(`[generate] Error with ${modelName}:`, error);
-            lastError = error;
-            
-            // If it's a 503 error and we have more models to try, continue
-            if (error instanceof Error && error.message.includes('503') && modelName !== models[models.length - 1]) {
-                console.log(`[generate] ${modelName} overloaded, trying fallback...`);
-                continue;
-            }
-            
-            // For other errors or last model, throw
-            if (modelName === models[models.length - 1]) {
-                break;
-            }
-        }
+    // Use only gemini-2.5-flash for all text generation
+    try {
+        console.log(`[generate] Using model: gemini-2.5-flash`);
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+        const result = await model.generateContent(prompt);
+        const response = result.response;
+        const text = response.text();
+        console.log(`[generate] Success with gemini-2.5-flash`);
+        return text;
+    } catch (error) {
+        console.error(`[generate] Error with gemini-2.5-flash:`, error);
+        throw error;
     }
-    
-    console.error('Error generating response with Gemini:', lastError);
-    throw lastError;
 }
 
 export const generateWithImage = async (prompt: string, image?: File) => {

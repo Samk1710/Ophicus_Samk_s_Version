@@ -4,7 +4,6 @@ import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
 import { CosmicBackground } from "@/components/cosmic-background"
 import { ProgressTracker } from "@/components/progress-tracker"
-import { PointsWidget } from "@/components/points-widget"
 import { CelestialIcon } from "@/components/celestial-icon"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -98,26 +97,31 @@ export default function AstralNexus() {
     }
   }
 
-  // Get completed rooms from game session
+  // Get completed rooms from game session (any completed room)
   const completedRooms = gameSession?.roomClues
     ? Object.entries(gameSession.roomClues)
-        .filter(([_, clue]) => clue.completed && (clue.score ?? 0) >= 7)
+        .filter(([_, clue]) => clue?.completed)
         .map(([roomId]) => roomId)
     : []
 
-  const failedRooms = gameSession?.roomClues
-    ? Object.entries(gameSession.roomClues)
-        .filter(([_, clue]) => clue.completed && (clue.score ?? 0) < 7)
-        .map(([roomId]) => roomId)
-    : []
+  // Failed rooms are those attempted but with 0 points (don't show X, just not completed)
+  const failedRooms: string[] = []  // We don't want to show X marks, only incomplete rooms
 
   console.log('[AstralNexus] Completed rooms:', completedRooms)
+  console.log('[AstralNexus] Game session completed status:', gameSession?.completed)
+
+  // Redirect to revelation if 4 rooms are completed and game not finished
+  useEffect(() => {
+    if (completedRooms.length === 4 && gameSession && !gameSession.completed) {
+      console.log('[AstralNexus] All 4 rooms completed, redirecting to revelation');
+      router.push('/final-guess');
+    }
+  }, [completedRooms.length, gameSession?.completed, router]);
 
   return (
     <div className="min-h-screen relative overflow-hidden cosmic-bg">
       <CosmicBackground />
       <ProgressTracker completedRooms={completedRooms} failedRooms={failedRooms} />
-      <PointsWidget />
 
       {/* Big Bang Popup */}
       <BigBangPopup isOpen={showBigBangPopup} onClose={() => setShowBigBangPopup(false)} />

@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import UserProfile from '@/lib/models/UserProfile';
+import Leaderboard from '@/lib/models/Leaderboard';
 import connectDB from '@/lib/mongodb';
+import SpotifyWebApi from 'spotify-web-api-node';
+
+const spotifyApi = new SpotifyWebApi({
+  clientId: process.env.SPOTIFY_CLIENT_ID,
+  clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
+});
 
 export async function GET(request: NextRequest) {
   console.log('\n' + '🏆 LEADERBOARD - GET TOP PLAYERS'.padEnd(80, ' '));
@@ -26,42 +32,63 @@ export async function GET(request: NextRequest) {
 
     await connectDB();
 
-    // Get top players sorted by total points
+    // Get top players sorted by total points from Leaderboard model
     console.log('🔍 [GET /api/leaderboard] Fetching top players...');
-    const topPlayers = await UserProfile
+    const topPlayers = await Leaderboard
       .find({})
       .sort({ totalPoints: -1 })
       .skip(skip)
       .limit(limit)
-      .select('username totalPoints totalGamesPlayed userId')
+      .select('userId username spotifyUserId totalPoints totalGamesCompleted highestSingleGamePoints lastPlayedAt')
       .lean();
 
     console.log(`✅ [GET /api/leaderboard] Found ${topPlayers.length} players`);
 
+    // Enrich with Spotify display names
+    spotifyApi.setAccessToken(session.user.accessToken);
+    const enrichedPlayers = await Promise.all(
+      topPlayers.map(async (player: any) => {
+        let displayName = player.username; // fallback
+        
+        try {
+          if (player.spotifyUserId) {
+            const userProfile = await spotifyApi.getUser(player.spotifyUserId);
+            displayName = userProfile.body.display_name || userProfile.body.id;
+            console.log(`[GET /api/leaderboard] Fetched Spotify name: ${displayName}`);
+          }
+        } catch (error) {
+          console.warn(`[GET /api/leaderboard] Failed to fetch Spotify name for ${player.spotifyUserId}`);
+        }
+        
+        return { ...player, username: displayName };
+      })
+    );
+
     // Get current user's rank
-    const currentUserProfile = await UserProfile.findOne({ 
+    const currentUserEntry = await Leaderboard.findOne({ 
       userId: session.user.username 
     }).lean();
 
     let currentUserRank = null;
-    if (currentUserProfile) {
-      const higherRankedCount = await UserProfile.countDocuments({
-        totalPoints: { $gt: (currentUserProfile as any).totalPoints }
+    if (currentUserEntry) {
+      const higherRankedCount = await Leaderboard.countDocuments({
+        totalPoints: { $gt: (currentUserEntry as any).totalPoints }
       });
       currentUserRank = higherRankedCount + 1;
       console.log(`🎯 [GET /api/leaderboard] Current user rank: ${currentUserRank}`);
     }
 
     // Get total player count
-    const totalPlayers = await UserProfile.countDocuments({});
+    const totalPlayers = await Leaderboard.countDocuments({});
     console.log(`📈 [GET /api/leaderboard] Total players: ${totalPlayers}`);
 
     // Format leaderboard entries with rank
-    const leaderboard = topPlayers.map((player: any, index) => ({
+    const leaderboard = enrichedPlayers.map((player: any, index) => ({
       rank: skip + index + 1,
       username: player.username,
       totalPoints: player.totalPoints,
-      totalGamesPlayed: player.totalGamesPlayed,
+      totalGamesCompleted: player.totalGamesCompleted,
+      highestSingleGamePoints: player.highestSingleGamePoints,
       isCurrentUser: player.userId === session.user.username
     }));
 
@@ -70,10 +97,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       leaderboard,
-      currentUser: currentUserProfile ? {
-        username: (currentUserProfile as any).username,
-        totalPoints: (currentUserProfile as any).totalPoints,
-        totalGamesPlayed: (currentUserProfile as any).totalGamesPlayed,
+      currentUser: currentUserEntry ? {
+        username: (currentUserEntry as any).username,
+        totalPoints: (currentUserEntry as any).totalPoints,
+        totalGamesCompleted: (currentUserEntry as any).totalGamesCompleted,
         rank: currentUserRank
       } : null,
       pagination: {

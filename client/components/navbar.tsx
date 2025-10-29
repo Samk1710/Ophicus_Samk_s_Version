@@ -6,13 +6,14 @@ import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { CelestialIcon } from "@/components/celestial-icon"
 import UserProfile  from "@/components/user-profile"
-import { Menu, X, Home, Map, Crown, User } from "lucide-react"
+import { Menu, X, Home, Map, Trophy, User, Scroll } from "lucide-react"
 
 const navItems = [
 	{ href: "/", label: "Origin", icon: Home },
 	{ href: "/home", label: "Realm", icon: User },
 	{ href: "/astral-nexus", label: "Nexus", icon: Map },
-	{ href: "/final-guess", label: "Revelation", icon: Crown },
+	{ href: "/my-quests", label: "My Quests", icon: Scroll },
+	{ href: "/leaderboard", label: "Leaderboard", icon: Trophy },
 ]
 
 export function Navbar() {

@@ -92,8 +92,8 @@ export async function POST(request: NextRequest) {
     const isCorrect = checkCometGuess(guessedTrackId, intermediarySong);
     console.log(isCorrect ? '✅ [POST /api/rooms/comet] CORRECT!' : '❌ [POST /api/rooms/comet] INCORRECT');
 
-    // Points: 100 if correct, 0 if wrong (only one chance)
-    const points = isCorrect ? 100 : 0;
+    // Points: 100 if correct, 10 if wrong (only one chance)
+    const points = isCorrect ? 100 : 10; // Award 10 points for failure
     console.log(`🎁 [POST /api/rooms/comet] Points awarded: ${points}`);
 
     let rewardClue = '';
@@ -119,7 +119,11 @@ export async function POST(request: NextRequest) {
       points: points,
       revealedSong: intermediarySong  // Always reveal
     });
-    console.log('✅ [POST /api/rooms/comet] Game state updated');
+    
+    // Update total points in session
+    gameSession.totalPoints = (gameSession.totalPoints || 0) + points;
+    await gameSession.save();
+    console.log(`✅ [POST /api/rooms/comet] Game state updated. Total points: ${gameSession.totalPoints}`);
     console.log('─'.repeat(80) + '\n');
 
     return NextResponse.json({

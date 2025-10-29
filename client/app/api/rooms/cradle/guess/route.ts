@@ -55,13 +55,16 @@ export async function POST(request: NextRequest) {
     console.log(isCorrect ? '✅ [POST /api/rooms/cradle/guess] CORRECT!' : '❌ [POST /api/rooms/cradle/guess] INCORRECT');
     console.log('🎯 [POST /api/rooms/cradle/guess] Correct artist:', correctArtistName);
 
-    // Calculate points: 100 for 1st attempt, 75 for 2nd, 50 for 3rd
+    // Calculate points: 100 for 1st attempt, 75 for 2nd, 50 for 3rd, 10 for failure
     let points = 0;
     if (isCorrect) {
       if (currentAttempts === 1) points = 100;
       else if (currentAttempts === 2) points = 75;
       else points = 50;
       console.log(`🎁 [POST /api/rooms/cradle/guess] Points awarded: ${points}`);
+    } else if (currentAttempts >= 3) {
+      points = 10; // Award 10 points for failure
+      console.log(`🎁 [POST /api/rooms/cradle/guess] Failed all attempts. Points awarded: ${points}`);
     }
 
     let rewardClue = '';
@@ -73,13 +76,18 @@ export async function POST(request: NextRequest) {
 
     // Update game state
     console.log('💾 [POST /api/rooms/cradle/guess] Updating game state...');
+    const shouldComplete = isCorrect || currentAttempts >= 3;
     await updateRoomCompletion(sessionId, 'cradle', {
       clue: rewardClue,
       attempts: currentAttempts,
-      completed: isCorrect,
+      completed: shouldComplete,
       points: points
     });
-    console.log('✅ [POST /api/rooms/cradle/guess] Game state updated');
+    
+    // Update total points in session
+    gameSession.totalPoints = (gameSession.totalPoints || 0) + points;
+    await gameSession.save();
+    console.log(`✅ [POST /api/rooms/cradle/guess] Game state updated. Total points: ${gameSession.totalPoints}`);
 
     console.log('─'.repeat(80) + '\n');
 

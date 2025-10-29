@@ -94,7 +94,7 @@ Return ONLY the clue text, nothing else.`;
 export async function generateOphiuchusIdentity(
   cosmicSong: ISong,
   userMusicProfile: string
-): Promise<string> {
+): Promise<{ title: string; description: string; imageUrl: string }> {
   console.log('[generateOphiuchusIdentity] Generating Ophiuchus identity');
 
   const prompt = `Based on this cosmic song and the user's musical journey, create a unique Ophiuchus zodiac identity.
@@ -102,16 +102,44 @@ export async function generateOphiuchusIdentity(
 Cosmic Song: ${cosmicSong.name} by ${cosmicSong.artists.join(', ')}
 Musical Profile: ${userMusicProfile}
 
-Create a mystical identity title that reflects the essence of this song and the user's connection to it.
+Create a mystical identity in JSON format with the following structure:
+{
+  "title": "Ophiuchus of the [poetic descriptor]",
+  "description": "A detailed mystical description of the user's musical soul, 2-3 sentences",
+  "imageUrl": ""
+}
 
-Format: "Ophiuchus of the [poetic descriptor] — [one sentence about their musical soul]"
+Example:
+{
+  "title": "Ophiuchus of the Quiet Chorus",
+  "description": "A soul born of friendship's echo, craving visibility through melody. Your cosmic journey reveals a spirit that seeks connection through the universal language of music.",
+  "imageUrl": ""
+}
 
-Example: "Ophiuchus of the Quiet Chorus — a soul born of friendship's echo, craving visibility through melody."
+Return ONLY valid JSON, no additional text.`;
 
-Return ONLY the identity text, nothing else.`;
-
-  const identity = await generate(prompt);
+  const response = await generate(prompt);
+  console.log('[generateOphiuchusIdentity] Raw response:', response);
+  
+  // Parse the response using parseUntilJson to handle any formatting issues
+  const identity = parseUntilJson(response) as { title: string; description: string; imageUrl: string };
+  
+  // Ensure required fields exist
+  if (!identity.title || !identity.description) {
+    console.warn('[generateOphiuchusIdentity] Missing fields, using defaults');
+    return {
+      title: identity.title || "Ophiuchus of the Celestial Harmonist",
+      description: identity.description || "A soul blessed by the 13th constellation, forever seeking cosmic truth through music.",
+      imageUrl: identity.imageUrl || cosmicSong.imageUrl || ""
+    };
+  }
+  
+  // Use cosmic song image as default if no image URL provided
+  if (!identity.imageUrl) {
+    identity.imageUrl = cosmicSong.imageUrl || "";
+  }
+  
   console.log('[generateOphiuchusIdentity] Identity generated:', identity);
   
-  return identity.trim();
+  return identity;
 }

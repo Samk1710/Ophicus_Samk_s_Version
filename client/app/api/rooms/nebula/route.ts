@@ -141,8 +141,8 @@ export async function POST(request: NextRequest) {
       console.log(`✅ [POST /api/rooms/nebula] Reward generated in ${Date.now() - startTime}ms`);
       console.log('📜 [POST /api/rooms/nebula] Reward clue:', rewardClue.substring(0, 100) + '...');
     } else if (currentAttempts >= 3) {
-      points = 0;
-      console.log('⚠️  [POST /api/rooms/nebula] Failed all 3 attempts, no points awarded');
+      points = 10; // Award 10 points for failed attempts
+      console.log('⚠️  [POST /api/rooms/nebula] Failed all 3 attempts, awarding 10 points');
       console.log('⚠️  [POST /api/rooms/nebula] Generating penalty clue...');
       const startTime = Date.now();
       rewardClue = await generateNebulaPenalty(gameSession.cosmicSong);
@@ -163,7 +163,11 @@ export async function POST(request: NextRequest) {
       points: points,
       revealedSong: shouldReveal ? intermediarySong : undefined
     });
-    console.log('✅ [POST /api/rooms/nebula] Game state updated');
+    
+    // Update total points in session
+    gameSession.totalPoints = (gameSession.totalPoints || 0) + points;
+    await gameSession.save();
+    console.log(`✅ [POST /api/rooms/nebula] Game state updated. Total points: ${gameSession.totalPoints}`);
 
     console.log('─'.repeat(80) + '\n');
 

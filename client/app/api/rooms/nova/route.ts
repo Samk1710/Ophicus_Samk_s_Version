@@ -108,8 +108,8 @@ export async function POST(request: NextRequest) {
     const score = scoreNovaAnswers(answers, questions);
     console.log('[POST /api/rooms/nova] Score:', score, '/', questions.length);
 
-    // Calculate points: 20 points per correct answer
-    const points = score * 20;
+    // Calculate points: 20 points per correct answer, minimum 10 if all wrong
+    let points = score > 0 ? score * 20 : 10; // Award 10 points if all wrong
     console.log('[POST /api/rooms/nova] Points awarded:', points);
 
     const reward = await generateNovaReward(gameSession.cosmicSong, score);
@@ -120,8 +120,12 @@ export async function POST(request: NextRequest) {
       points: points,
       completed: true
     });
+    
+    // Update total points in session
+    gameSession.totalPoints = (gameSession.totalPoints || 0) + points;
+    await gameSession.save();
 
-    console.log('[POST /api/rooms/nova] Room completed');
+    console.log('[POST /api/rooms/nova] Room completed. Total points:', gameSession.totalPoints);
 
     // Celebrate if they got perfect score
     const isPerfect = score === questions.length;

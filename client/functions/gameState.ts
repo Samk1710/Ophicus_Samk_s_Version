@@ -89,7 +89,10 @@ export async function submitFinalGuess(
 
   console.log('[submitFinalGuess] Cosmic Song ID:', session.cosmicSong?.id);
   console.log('[submitFinalGuess] Cosmic Song Name:', session.cosmicSong?.name);
-  console.log('[submitFinalGuess] Comparing:', { guessedTrackId, correctId: session.cosmicSong?.id });
+  console.log('[submitFinalGuess] Guessed Track ID:', guessedTrackId);
+  console.log('[submitFinalGuess] ID Match:', guessedTrackId === session.cosmicSong?.id);
+  console.log('[submitFinalGuess] ID Type - Guessed:', typeof guessedTrackId);
+  console.log('[submitFinalGuess] ID Type - Cosmic:', typeof session.cosmicSong?.id);
   
   // Ensure cosmicSong and its ID exist
   if (!session.cosmicSong || !session.cosmicSong.id) {
@@ -97,18 +100,18 @@ export async function submitFinalGuess(
     return { correct: false, session };
   }
   
-  // Compare track IDs directly
-  const correct = guessedTrackId === session.cosmicSong.id;
+  // Compare track IDs directly (both should be strings)
+  const correct = String(guessedTrackId).trim() === String(session.cosmicSong.id).trim();
   
   session.finalGuessAttempts = (session.finalGuessAttempts || 0) + 1;
   
   if (correct) {
     session.completed = true;
-    console.log('[submitFinalGuess] ✅ CORRECT! Track IDs match:', guessedTrackId);
+    console.log('[submitFinalGuess] ✅ CORRECT! Track IDs match');
   } else {
     console.log('[submitFinalGuess] ❌ INCORRECT! IDs do not match');
-    console.log('[submitFinalGuess] Expected:', session.cosmicSong.id);
-    console.log('[submitFinalGuess] Got:', guessedTrackId);
+    console.log('[submitFinalGuess] Expected (trimmed):', String(session.cosmicSong.id).trim());
+    console.log('[submitFinalGuess] Got (trimmed):', String(guessedTrackId).trim());
     console.log('[submitFinalGuess] Attempts:', session.finalGuessAttempts);
   }
 
@@ -119,7 +122,7 @@ export async function submitFinalGuess(
 
 export async function setOphiuchusIdentity(
   sessionId: string,
-  identity: string
+  identity: { title: string; description: string; imageUrl: string }
 ): Promise<IGameSession | null> {
   console.log('[setOphiuchusIdentity] Setting identity for session:', sessionId);
   await connectDB();

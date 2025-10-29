@@ -163,12 +163,13 @@ export async function POST(request: NextRequest) {
     console.log(`💬 [POST /api/rooms/aurora] Feedback: ${feedback}`);
 
     // Points based on score: 0-10 scale directly translates to points
-    // 9-10: 100 points, 7-8: 75 points, 5-6: 50 points, 3-4: 25 points, 0-2: 0 points
+    // 9-10: 100 points, 7-8: 75 points, 5-6: 50 points, 3-4: 25 points, 0-2: 10 points (failure)
     let points = 0;
     if (score >= 9) points = 100;
     else if (score >= 7) points = 75;
     else if (score >= 5) points = 50;
     else if (score >= 3) points = 25;
+    else points = 10; // Award 10 points for failure
     
     console.log(`🎁 [POST /api/rooms/aurora] Points awarded: ${points}`);
 

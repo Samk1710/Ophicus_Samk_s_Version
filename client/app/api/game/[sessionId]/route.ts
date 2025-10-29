@@ -5,10 +5,11 @@ import { getGameSession } from '@/functions/gameState';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { sessionId: string } }
+  { params }: { params: Promise<{ sessionId: string }> }
 ) {
   try {
-    console.log('[GET /api/game/[sessionId]] Fetching game session:', params.sessionId);
+    const { sessionId } = await params;
+    console.log('[GET /api/game/[sessionId]] Fetching game session:', sessionId);
 
     const session = await getServerSession(authOptions);
     if (!session?.user) {
@@ -16,7 +17,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const gameSession = await getGameSession(params.sessionId);
+    const gameSession = await getGameSession(sessionId);
     
     if (!gameSession) {
       console.log('[GET /api/game/[sessionId]] Session not found');
@@ -38,9 +39,10 @@ export async function GET(
         initialClue: gameSession.initialClue,
         roomsCompleted: gameSession.roomsCompleted,
         roomClues: gameSession.roomClues,
-        finalGuesses: gameSession.finalGuesses,
+        finalGuessAttempts: gameSession.finalGuessAttempts,
         completed: gameSession.completed,
         ophiuchusIdentity: gameSession.ophiuchusIdentity,
+        totalPoints: gameSession.totalPoints,
         // Don't expose the cosmic song until game is complete
         cosmicSong: gameSession.completed ? gameSession.cosmicSong : null
       }

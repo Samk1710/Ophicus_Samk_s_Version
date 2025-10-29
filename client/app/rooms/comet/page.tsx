@@ -6,7 +6,6 @@ import { useState, useEffect } from "react"
 import { CosmicBackground } from "@/components/cosmic-background"
 import { CosmicLoading } from "@/components/cosmic-loading"
 import { ProgressTracker } from "@/components/progress-tracker"
-import { PointsWidget } from "@/components/points-widget"
 import { CelestialIcon } from "@/components/celestial-icon"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -25,7 +24,7 @@ import {
 } from "@/components/ui/alert-dialog"
 
 export default function CometRoom() {
-  const [timeLeft, setTimeLeft] = useState(10)
+  const [timeLeft, setTimeLeft] = useState(30)
   const [showLyric, setShowLyric] = useState(false)
   const [showInput, setShowInput] = useState(false)
   const [cometVisible, setCometVisible] = useState(false)
@@ -45,8 +44,7 @@ export default function CometRoom() {
 
   useEffect(() => {
     if (!sessionId) {
-      console.log('[Comet] No session ID, redirecting')
-      router.push('/home')
+      console.log('[Comet] No session ID yet, waiting...')
       return
     }
     
@@ -80,10 +78,11 @@ export default function CometRoom() {
         setShowInput(true)
       } else {
         setLyric(data.lyric || "Mysterious lyrics from the cosmos...")
-        // Start comet animation
+        // Start comet animation and show both lyric and input immediately
         setTimeout(() => {
           setCometVisible(true)
           setShowLyric(true)
+          setShowInput(true)  // Show input box immediately with lyrics
         }, 1000)
       }
     } catch (error) {
@@ -100,12 +99,26 @@ export default function CometRoom() {
         setTimeLeft(timeLeft - 1)
       }, 1000)
       return () => clearTimeout(timer)
-    } else if (timeLeft === 0 && showLyric) {
-      console.log('[Comet] Time expired, showing guess form')
+    } else if (timeLeft === 0 && showLyric && !isCompleted) {
+      // Time expired with no answer - end room with 0 points
+      console.log('[Comet] Time expired with no answer - room failed')
+      setIsCompleted(true)
       setShowLyric(false)
-      setShowInput(true)
+      setShowInput(false)
+      setShowFailureDialog(true)
+      
+      // Mark room as failed with 0 points
+      fetch('/api/rooms/comet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId,
+          guessedTrackId: 'timeout', // Special value to indicate timeout
+          timeout: true
+        })
+      }).then(() => refreshGameState())
     }
-  }, [timeLeft, showLyric, isCompleted])
+  }, [timeLeft, showLyric, isCompleted, sessionId, refreshGameState])
 
   const handleGuess = async () => {
     if (!selectedTrack || isSubmitting) {
@@ -156,13 +169,13 @@ export default function CometRoom() {
 
   const completedRooms = gameSession?.roomClues
     ? Object.entries(gameSession.roomClues)
-        .filter(([_, clue]) => clue?.completed && (clue?.score ?? 0) >= 7)
+        .filter(([_, clue]) => clue?.completed && (clue?.points ?? 0) > 0)
         .map(([roomId]) => roomId)
     : []
 
   const failedRooms = gameSession?.roomClues
     ? Object.entries(gameSession.roomClues)
-        .filter(([_, clue]) => clue?.completed && (clue?.score ?? 0) < 7)
+        .filter(([_, clue]) => clue?.completed && (clue?.points ?? 0) === 0)
         .map(([roomId]) => roomId)
     : []
 
@@ -174,7 +187,6 @@ export default function CometRoom() {
     <div className="min-h-screen relative overflow-hidden cosmic-bg">
       <CosmicBackground />
       <ProgressTracker completedRooms={completedRooms} failedRooms={failedRooms} currentRoom="comet" />
-      <PointsWidget />
 
       {/* Comet Trail Animation */}
       {cometVisible && (
@@ -205,12 +217,12 @@ export default function CometRoom() {
               </div>
               <h2 className="font-cormorant text-2xl font-bold text-orange-100 mb-2">Catch the Cosmic Flash</h2>
               <p className="font-poppins text-orange-200">
-                A comet streaks across the void carrying a lyric from the past. You have 10 seconds to memorize it
-                before it disappears forever.
+                A comet streaks across the void carrying a lyric from the past. You have 30 seconds to see it and 
+                answer which song it's from. If time runs out, the chamber closes with zero points.
               </p>
             </div>
 
-            {/* Timer and Lyric Display */}
+            {/* Timer and Lyric Display - Both visible together */}
             {showLyric && !isCompleted && (
               <div className="space-y-6">
                 {/* Circular Timer */}
@@ -226,7 +238,7 @@ export default function CometRoom() {
                       fill="none"
                       strokeLinecap="round"
                       strokeDasharray={`${2 * Math.PI * 45}`}
-                      strokeDashoffset={`${2 * Math.PI * 45 * (1 - timeLeft / 10)}`}
+                      strokeDashoffset={`${2 * Math.PI * 45 * (1 - timeLeft / 30)}`}
                       className="transition-all duration-1000 ease-linear"
                     />
                   </svg>
@@ -242,13 +254,13 @@ export default function CometRoom() {
               </div>
             )}
 
-            {/* Input Form */}
+            {/* Input Form - Shows alongside lyrics */}
             {showInput && !isCompleted && (
-              <div className="space-y-6">
+              <div className="space-y-6 mt-6">
                 <div className="text-center">
                   <Zap className="w-12 h-12 mx-auto mb-4 text-orange-400" />
-                  <h3 className="font-cormorant text-xl font-bold text-orange-100 mb-2">The Comet Has Passed</h3>
-                  <p className="font-poppins text-orange-200 mb-6">Which song contained that lyric?</p>
+                  <h3 className="font-cormorant text-xl font-bold text-orange-100 mb-2">Which Song Is This?</h3>
+                  <p className="font-poppins text-orange-200 mb-6">Search and select before time runs out!</p>
                 </div>
 
                 <div className="space-y-4">

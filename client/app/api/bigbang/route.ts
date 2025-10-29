@@ -28,19 +28,18 @@ export async function POST(request: NextRequest) {
       hasAccessToken: !!session.user.accessToken
     });
 
-    // Connect to DB and check for existing active sessions
+    // Connect to DB and check for existing sessions (both active and completed)
     await connectDB();
-    console.log('🗄️  [POST /api/bigbang] Checking for existing active sessions...');
+    console.log('🗄️  [POST /api/bigbang] Checking for existing sessions...');
     
-    const existingSession = await GameSession.findOne({
-      userId: session.user.username,
-      completed: false
+    const existingSessions = await GameSession.find({
+      userId: session.user.username
     });
 
-    if (existingSession) {
-      console.log('⚠️  [POST /api/bigbang] Found existing active session, deleting:', existingSession._id);
-      await GameSession.findByIdAndDelete(existingSession._id);
-      console.log('✅ [POST /api/bigbang] Old session deleted');
+    if (existingSessions.length > 0) {
+      console.log(`⚠️  [POST /api/bigbang] Found ${existingSessions.length} existing session(s), deleting...`);
+      await GameSession.deleteMany({ userId: session.user.username });
+      console.log('✅ [POST /api/bigbang] Old session(s) deleted');
     }
 
     // Set Spotify access token
