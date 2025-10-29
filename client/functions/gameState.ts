@@ -18,7 +18,8 @@ export async function createGameSession(
     intermediarySongs,
     initialClue,
     roomsCompleted: [],
-    roomClues: {},
+  roomClues: {},
+  roomsCompletedMap: {},
     finalGuesses: 0,
     completed: false
   });
@@ -56,10 +57,13 @@ export async function updateRoomCompletion(
   console.log('[updateRoomCompletion] Updating room:', roomName, 'for session:', sessionId);
   await connectDB();
 
+  // Keep legacy roomsCompleted array for compatibility, and also set the per-room map entry to 'pending' by default
   const update: any = {
     $addToSet: { roomsCompleted: roomName },
     $set: {
-      [`roomClues.${roomName}`]: roomClue
+      [`roomClues.${roomName}`]: roomClue,
+      // Ensure the room exists in the roomsCompletedMap with at least 'pending' status
+      [`roomsCompletedMap.${roomName}`]: 'pending'
     }
   };
 
@@ -70,6 +74,25 @@ export async function updateRoomCompletion(
   );
 
   console.log('[updateRoomCompletion] Room updated successfully');
+  return session;
+}
+
+// Mark the final status for a room: 'correct' or 'wrong'
+export async function markRoomFinalStatus(
+  sessionId: string,
+  roomName: string,
+  status: 'correct' | 'wrong'
+): Promise<IGameSession | null> {
+  console.log('[markRoomFinalStatus] Marking room final status:', roomName, status, 'for session:', sessionId);
+  await connectDB();
+
+  const update: any = {
+    $set: {
+      [`roomsCompletedMap.${roomName}`]: status
+    }
+  };
+
+  const session = await GameSession.findByIdAndUpdate(sessionId, update, { new: true });
   return session;
 }
 

@@ -29,6 +29,8 @@ export interface IGameSession extends Document {
   intermediarySongs: ISong[];
   initialClue: string;
   roomsCompleted: string[];
+  // New map of per-room final status: 'pending' | 'correct' | 'wrong'
+  roomsCompletedMap?: { [roomId: string]: 'pending' | 'correct' | 'wrong' };
   roomClues: {
     nebula?: IRoomClue;
     cradle?: IRoomClue;
@@ -76,6 +78,7 @@ const GameSessionSchema = new Schema({
   intermediarySongs: [SongSchema],
   initialClue: { type: String, required: true },
   roomsCompleted: [{ type: String }],
+  roomsCompletedMap: { type: Object, default: {} },
   roomClues: {
     nebula: { type: RoomClueSchema },
     cradle: { type: RoomClueSchema },

@@ -105,7 +105,20 @@ export default function AstralNexus() {
 
   // End current session and start new quest (reset points)
   const handleEndSessionAndStartNew = async () => {
-    // End session by clearing sessionId and refreshing state
+    // Call server to archive and delete the session, then clear local client state
+    try {
+      if (sessionId) {
+        await fetch('/api/game/complete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId })
+        });
+      }
+    } catch (err) {
+      console.error('[AstralNexus] Failed to complete session via API', err);
+    }
+
+    // Clear local session id and refresh client state
     if (typeof window !== 'undefined') {
       localStorage.removeItem('sessionId')
     }

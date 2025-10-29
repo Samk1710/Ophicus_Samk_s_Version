@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { submitFinalGuess, setOphiuchusIdentity } from '@/functions/gameState';
+import { submitFinalGuess, setOphiuchusIdentity, markRoomFinalStatus } from '@/functions/gameState';
 import { generateOphiuchusIdentity } from '@/functions/bigbang';
 import { completeGameSession } from '@/functions/leaderboard';
+import GameSession from '@/lib/models/GameSession';
 
 export async function POST(request: NextRequest) {
   console.log('\n' + '🎯 FINAL GUESS - COSMIC SONG REVELATION'.padEnd(80, '='));
@@ -102,8 +103,16 @@ export async function POST(request: NextRequest) {
         console.log('✅ [POST /api/final-guess] Game session marked as completed');
         
         // Archive to leaderboard but keep session in DB for now
-        await completeGameSession(sessionId);
+        await completeGameSession(sessionId);        
         console.log('✅ [POST /api/final-guess] Game session archived to leaderboard');
+
+        // After successful archive, delete the active session document to clean up
+        try {
+          await GameSession.findByIdAndDelete(sessionId);
+          console.log('✅ [POST /api/final-guess] Game session deleted from active sessions');
+        } catch (delErr) {
+          console.error('❌ [POST /api/final-guess] Failed to delete session after archiving:', delErr);
+        }
       } catch (error) {
         console.error('❌ [POST /api/final-guess] Failed to complete game session:', error);
         // Continue anyway - user still gets success response
@@ -163,8 +172,24 @@ export async function POST(request: NextRequest) {
         try {
           result.session.completed = true; // Mark as completed even though they failed
           await result.session.save();
+
+          const lastRoom = (result.session.roomsCompleted && result.session.roomsCompleted.length > 0)
+            ? result.session.roomsCompleted[result.session.roomsCompleted.length - 1]
+            : 'nova';
+
+          // Mark the room as wrong
+          await markRoomFinalStatus(sessionId, lastRoom, 'wrong');
+
           await completeGameSession(sessionId);
           console.log('✅ [POST /api/final-guess] Failed game session archived');
+
+          try {
+            await GameSession.findByIdAndDelete(sessionId);
+            console.log('✅ [POST /api/final-guess] Game session deleted from active sessions after failure');
+          } catch (delErr) {
+            console.error('❌ [POST /api/final-guess] Failed to delete session after archiving failed session:', delErr);
+          }
+
         } catch (error) {
           console.error('❌ [POST /api/final-guess] Failed to archive game session:', error);
         }

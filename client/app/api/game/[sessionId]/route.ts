@@ -38,6 +38,10 @@ export async function GET(
         id: (gameSession as any)._id.toString(),
         initialClue: gameSession.initialClue,
         roomsCompleted: gameSession.roomsCompleted,
+        // Provide the new per-room status map; fallback to legacy array if map is empty
+        roomsCompletedMap: (gameSession as any).roomsCompletedMap && Object.keys((gameSession as any).roomsCompletedMap).length > 0
+          ? (gameSession as any).roomsCompletedMap
+          : (gameSession.roomsCompleted || []).reduce((acc: any, r: string) => ({ ...acc, [r]: 'correct' }), {}),
         roomClues: gameSession.roomClues,
         finalGuessAttempts: gameSession.finalGuessAttempts,
         completed: gameSession.completed,
