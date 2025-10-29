@@ -103,7 +103,8 @@ export async function submitFinalGuess(
   // Compare track IDs directly (both should be strings)
   const correct = String(guessedTrackId).trim() === String(session.cosmicSong.id).trim();
   
-  session.finalGuessAttempts = (session.finalGuessAttempts || 0) + 1;
+  // Increment attempts but cap at 3 maximum
+  session.finalGuessAttempts = Math.min((session.finalGuessAttempts || 0) + 1, 3);
   
   if (correct) {
     session.completed = true;

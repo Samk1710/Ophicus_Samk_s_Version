@@ -30,26 +30,37 @@ export default function FinalGuessPage() {
   const [showSuccessDialog, setShowSuccessDialog] = useState(false)
   const [showQuestSummary, setShowQuestSummary] = useState(false)
   const [showFailureDialog, setShowFailureDialog] = useState(false)
-  const [showIncompletePopup, setShowIncompletePopup] = useState(false);
+  const [showGameOverDialog, setShowGameOverDialog] = useState(false)
+  const [showFinalSummary, setShowFinalSummary] = useState(false)
+  const [finalStatus, setFinalStatus] = useState<'success' | 'failure' | null>(null)
   const [zodiacTitle, setZodiacTitle] = useState("")
   const [zodiacDescription, setZodiacDescription] = useState("")
   const [zodiacImageUrl, setZodiacImageUrl] = useState("")
   const [attemptsRemaining, setAttemptsRemaining] = useState(3)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [questSummaryData, setQuestSummaryData] = useState<any>(null)
+  const [revealedCosmicSong, setRevealedCosmicSong] = useState<any>(null)
   const { sessionId, gameSession, refreshGameState, setSessionId } = useGameState()
 
+  console.log('[FinalGuess] === RENDER ===');
+  console.log('[FinalGuess] showGameOverDialog:', showGameOverDialog);
+  console.log('[FinalGuess] showFailureDialog:', showFailureDialog);
+  console.log('[FinalGuess] revealedCosmicSong:', revealedCosmicSong);
   console.log('[FinalGuess] Session ID:', sessionId)
   console.log('[FinalGuess] Game Session:', gameSession)
   console.log('[FinalGuess] Selected Song:', selectedSong)
 
-  console.log('[FinalGuess] Session ID:', sessionId)
-  console.log('[FinalGuess] Game Session:', gameSession)
-  console.log('[FinalGuess] Selected Song:', selectedSong)
-
-  // Check if all 4 rooms are completed
+  // Redirect to nexus if no session exists
   useEffect(() => {
-    if (!gameSession) return;
+    if (!sessionId) {
+      console.log('[FinalGuess] No session found, redirecting to nexus');
+      router.push('/astral-nexus');
+    }
+  }, [sessionId, router]);
+
+  // Auto-complete incomplete rooms with 0 points when page loads
+  useEffect(() => {
+    if (!gameSession || !sessionId) return;
 
     const completedRooms = gameSession.roomClues
       ? Object.entries(gameSession.roomClues)
@@ -59,11 +70,29 @@ export default function FinalGuessPage() {
 
     console.log('[FinalGuess] Completed rooms:', completedRooms);
 
+    // If less than 4 rooms completed, mark the rest as skipped (0 points)
     if (completedRooms.length < 4) {
-      console.log('[FinalGuess] Not all rooms completed, showing popup');
-      setShowIncompletePopup(true);
+      const allRooms = ['nebula', 'cradle', 'comet', 'aurora'];
+      const incompleteRooms = allRooms.filter(room => !completedRooms.includes(room));
+      
+      console.log('[FinalGuess] Auto-completing incomplete rooms with 0 points:', incompleteRooms);
+      
+      // Mark each incomplete room as skipped
+      incompleteRooms.forEach(async (roomId) => {
+        try {
+          await fetch('/api/rooms/skip', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId, roomId }),
+          });
+        } catch (error) {
+          console.error('[FinalGuess] Failed to skip room:', roomId, error);
+        }
+      });
     }
-  }, [gameSession]);  // Epic confetti celebration for final success
+  }, [gameSession, sessionId]);
+  
+  // Epic confetti celebration for final success
   const celebrateVictory = () => {
     const duration = 5000 // 5 seconds of confetti!
     const animationEnd = Date.now() + duration
@@ -114,6 +143,15 @@ export default function FinalGuessPage() {
     }
   }, [showSuccessDialog])
 
+  // Debug state changes
+  useEffect(() => {
+    console.log('[FinalGuess] State updated:');
+    console.log('  - showGameOverDialog:', showGameOverDialog);
+    console.log('  - showFailureDialog:', showFailureDialog);
+    console.log('  - revealedCosmicSong:', revealedCosmicSong);
+    console.log('  - questSummaryData:', questSummaryData);
+  }, [showGameOverDialog, showFailureDialog, revealedCosmicSong, questSummaryData]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedSong || !sessionId) {
@@ -134,8 +172,19 @@ export default function FinalGuessPage() {
         }),
       })
 
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status} ${response.statusText}`);
+      }
+
       const data = await response.json()
-      console.log('[FinalGuess] Response:', data)
+      console.log('[FinalGuess] ======= FULL API RESPONSE =======');
+      console.log(JSON.stringify(data, null, 2));
+      console.log('[FinalGuess] ===================================');
+      console.log('[FinalGuess] data.correct:', data.correct)
+      console.log('[FinalGuess] data.gameOver:', data.gameOver)
+      console.log('[FinalGuess] data.attemptsRemaining:', data.attemptsRemaining)
+      console.log('[FinalGuess] data.cosmicSong:', data.cosmicSong)
+      console.log('[FinalGuess] data.questSummary:', data.questSummary)
 
       if (data.correct) {
         // Parse Ophiuchus identity
@@ -158,25 +207,65 @@ export default function FinalGuessPage() {
           setQuestSummaryData(data.questSummary)
         }
         
-        // Clear session from localStorage since game is complete
-        console.log('[FinalGuess] Clearing session from localStorage');
-        setSessionId(null);
+        // DON'T clear session yet - wait for "End Quest" button
+        console.log('[FinalGuess] Game complete, waiting for user to end quest');
         
-        setShowSuccessDialog(true)
+        setFinalStatus('success');
+        setShowSuccessDialog(true);
       } else {
         setAttemptsRemaining(data.attemptsRemaining || 0)
         console.log('[FinalGuess] Incorrect guess. Attempts remaining:', data.attemptsRemaining)
         
-        // If no attempts remaining, clear session
-        if (data.attemptsRemaining === 0) {
-          console.log('[FinalGuess] No attempts remaining, clearing session from localStorage');
-          setSessionId(null);
+        // Store quest summary data if game is over
+        if (data.questSummary) {
+          console.log('[FinalGuess] Setting quest summary data:', data.questSummary);
+          setQuestSummaryData(data.questSummary)
         }
         
-        setShowFailureDialog(true)
+        // If game over (no attempts remaining), show red popup with cosmic song
+        if (data.gameOver === true) {
+          console.log('[FinalGuess] 🚨 GAME OVER DETECTED!');
+          console.log('[FinalGuess] Cosmic song data:', JSON.stringify(data.cosmicSong, null, 2));
+          console.log('[FinalGuess] Quest summary data:', JSON.stringify(data.questSummary, null, 2));
+          
+          // Set all states synchronously
+          const cosmicSong = data.cosmicSong;
+          console.log('[FinalGuess] Setting revealedCosmicSong:', cosmicSong);
+          setRevealedCosmicSong(cosmicSong);
+          
+          console.log('[FinalGuess] Setting finalStatus to failure');
+          setFinalStatus('failure');
+          
+          console.log('[FinalGuess] Setting showGameOverDialog to TRUE');
+          setShowGameOverDialog(true);
+          
+          // Force a small delay to ensure state updates
+          setTimeout(() => {
+            console.log('[FinalGuess] After timeout - showGameOverDialog should be:', showGameOverDialog);
+          }, 100);
+        } else if (data.attemptsRemaining > 0) {
+          // Still have attempts, show regular failure dialog
+          console.log('[FinalGuess] Still have attempts, showing failure dialog');
+          setShowFailureDialog(true);
+        } else {
+          console.error('[FinalGuess] ⚠️ WARNING: No attempts remaining but gameOver is not true!');
+          console.error('[FinalGuess] data.gameOver:', data.gameOver);
+          console.error('[FinalGuess] data.attemptsRemaining:', data.attemptsRemaining);
+        }
       }
 
-      await refreshGameState()
+      // Only refresh game state if the session is not completed/archived
+      // to avoid 404 errors
+      if (!data.gameOver && !data.correct) {
+        console.log('[FinalGuess] Refreshing game state...');
+        try {
+          await refreshGameState();
+        } catch (error) {
+          console.error('[FinalGuess] Error refreshing game state (non-critical):', error);
+        }
+      } else {
+        console.log('[FinalGuess] Skipping game state refresh - game is over');
+      }
     } catch (error) {
       console.error('[FinalGuess] Failed to submit guess:', error)
       alert('Failed to submit your guess. Please try again.')
@@ -187,29 +276,6 @@ export default function FinalGuessPage() {
 
   return (
     <>
-      {/* Incomplete Rooms Popup */}
-      <AlertDialog open={showIncompletePopup} onOpenChange={setShowIncompletePopup}>
-        <AlertDialogContent className="glassmorphism border-purple-400/50">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="font-cinzel text-2xl font-bold text-center text-purple-100">
-              Cosmic Chambers Incomplete
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-center space-y-3">
-              <p className="font-poppins text-purple-200">
-                You must complete all 4 cosmic chambers before attempting the final revelation.
-              </p>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-            <Link href="/astral-nexus" className="w-full">
-              <Button className="mystical-button w-full">
-                Return to Astral Nexus
-              </Button>
-            </Link>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
       <div className="min-h-screen relative overflow-hidden cosmic-bg">
         <CosmicBackground />
         <ProgressTracker completedRooms={gameSession?.roomClues 
@@ -220,7 +286,7 @@ export default function FinalGuessPage() {
         />
 
         {/* Quest Summary */}
-        {questSummaryData && (
+        {showQuestSummary && questSummaryData && (
           <QuestSummary
             isOpen={showQuestSummary}
             onClose={() => setShowQuestSummary(false)}
@@ -300,7 +366,82 @@ export default function FinalGuessPage() {
           </AlertDialogContent>
         </AlertDialog>
 
-        {/* Failure Dialog */}
+        {/* Game Over Dialog - Red Popup with Cosmic Song Revealed */}
+        <AlertDialog open={showGameOverDialog} onOpenChange={setShowGameOverDialog}>
+          <AlertDialogContent className="glassmorphism border-red-400/50 max-w-2xl max-h-[90vh] overflow-y-auto">
+            <AlertDialogHeader>
+              <div className="flex justify-center mb-4">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-red-500/30 to-orange-600/30 flex items-center justify-center pulse-glow">
+                  <XCircle className="w-10 h-10 sm:w-12 sm:h-12 text-red-400" />
+                </div>
+              </div>
+              <AlertDialogTitle className="font-cinzel text-2xl sm:text-3xl font-bold text-center glow-text text-red-400">
+                Quest Failed
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-center space-y-3 sm:space-y-4">
+                <p className="font-poppins text-base sm:text-lg text-red-300">
+                  You have exhausted all 3 attempts. The cosmic truth is revealed...
+                </p>
+                
+                {revealedCosmicSong && (
+                  <div className="bg-red-900/30 rounded-lg p-3 sm:p-4 border border-red-400/50">
+                    <p className="font-cormorant text-lg sm:text-xl font-bold text-red-100 mb-3">The Cosmic Song Was:</p>
+                    {revealedCosmicSong.imageUrl && (
+                      <div className="mb-3">
+                        <img 
+                          src={revealedCosmicSong.imageUrl} 
+                          alt={revealedCosmicSong.name}
+                          className="w-32 h-32 sm:w-40 sm:h-40 mx-auto rounded-lg border-2 border-red-400/50 object-cover"
+                        />
+                      </div>
+                    )}
+                    <p className="font-poppins text-base sm:text-lg text-red-100 font-bold break-words">
+                      "{revealedCosmicSong.name}"
+                    </p>
+                    <p className="font-poppins text-sm sm:text-base text-red-200 mt-1">
+                      by {revealedCosmicSong.artists?.join(', ')}
+                    </p>
+                    {revealedCosmicSong.spotifyUrl && (
+                      <a 
+                        href={revealedCosmicSong.spotifyUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="inline-block mt-3 text-xs sm:text-sm text-green-400 hover:text-green-300 underline"
+                      >
+                        Listen on Spotify ↗
+                      </a>
+                    )}
+                  </div>
+                )}
+
+                <div className="bg-black/30 rounded-lg p-3 sm:p-4 border border-red-400/30">
+                  <p className="font-poppins text-sm sm:text-base text-red-300">
+                    Your final guess: <span className="font-bold text-red-100">"{selectedSong?.name}"</span> by {selectedSong?.artist}
+                  </p>
+                  <p className="font-poppins text-xs sm:text-sm text-orange-300 mt-2">
+                    You've earned 25 consolation points for your cosmic journey.
+                  </p>
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="flex-col sm:flex-row gap-2 mt-4">
+              <Button
+                onClick={() => {
+                  setShowGameOverDialog(false)
+                  if (questSummaryData) {
+                    setShowQuestSummary(true)
+                  }
+                }}
+                className="mystical-button w-full text-sm sm:text-base bg-red-600/20 hover:bg-red-600/30 border-red-400/50"
+              >
+                <PartyPopper className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                View Quest Summary
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Failure Dialog - For Incorrect Attempts (Still Have Tries Left) */}
         <AlertDialog open={showFailureDialog} onOpenChange={setShowFailureDialog}>
           <AlertDialogContent className="glassmorphism border-purple-400/50">
             <AlertDialogHeader>
@@ -317,32 +458,20 @@ export default function FinalGuessPage() {
                   Your guess: <span className="font-bold text-purple-100">"{selectedSong?.name}"</span> by {selectedSong?.artist}
                 </p>
                 <p className="font-poppins text-purple-300">
-                  {attemptsRemaining > 0 ? (
-                    <>You have <span className="font-bold text-yellow-300">{attemptsRemaining}</span> {attemptsRemaining === 1 ? 'attempt' : 'attempts'} remaining.</>
-                  ) : (
-                    <span className="text-red-400 font-bold">All attempts exhausted. The cosmic song remains hidden.</span>
-                  )}
+                  You have <span className="font-bold text-yellow-300">{attemptsRemaining}</span> {attemptsRemaining === 1 ? 'attempt' : 'attempts'} remaining.
                 </p>
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-              {attemptsRemaining > 0 ? (
-                <Button
-                  onClick={() => {
-                    setShowFailureDialog(false)
-                    setSelectedSong(null)
-                  }}
-                  className="mystical-button w-full"
-                >
-                  Try Again
-                </Button>
-              ) : (
-                <Link href="/astral-nexus" className="w-full">
-                  <Button className="mystical-button w-full">
-                    Return to Nexus
-                  </Button>
-                </Link>
-              )}
+              <Button
+                onClick={() => {
+                  setShowFailureDialog(false)
+                  setSelectedSong(null)
+                }}
+                className="mystical-button w-full"
+              >
+                Try Again
+              </Button>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

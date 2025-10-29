@@ -10,6 +10,14 @@ import { Button } from "@/components/ui/button"
 import { BigBangPopup } from "@/components/big-bang-popup"
 import { Globe, Flame, Rainbow, Star, Loader2, Crown, Music } from "lucide-react"
 import Link from "next/link"
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+} from "@/components/ui/alert-dialog"
 import { useGameState } from "@/components/providers/game-state-provider"
 import { useRouter } from "next/navigation"
 
@@ -59,6 +67,7 @@ const planets = [
 export default function AstralNexus() {
   const [hoveredPlanet, setHoveredPlanet] = useState<string | null>(null)
   const [showBigBangPopup, setShowBigBangPopup] = useState(false)
+  const [showConfirmEndSession, setShowConfirmEndSession] = useState(false)
   const [isBigBangLoading, setIsBigBangLoading] = useState(false)
   const { data: session } = useSession()
   const { sessionId, gameSession, initializeBigBang, refreshGameState } = useGameState()
@@ -81,12 +90,9 @@ export default function AstralNexus() {
   const handleBeginJourney = async () => {
     console.log('[AstralNexus] Begin Journey button clicked')
     setIsBigBangLoading(true)
-    
     try {
       const newSessionId = await initializeBigBang()
       console.log('[AstralNexus] Big Bang initialized, session:', newSessionId)
-      
-      // Close popup and refresh game state
       setShowBigBangPopup(false)
       await refreshGameState()
     } catch (error) {
@@ -95,6 +101,17 @@ export default function AstralNexus() {
     } finally {
       setIsBigBangLoading(false)
     }
+  }
+
+  // End current session and start new quest (reset points)
+  const handleEndSessionAndStartNew = async () => {
+    // End session by clearing sessionId and refreshing state
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('sessionId')
+    }
+    await refreshGameState()
+    setShowConfirmEndSession(false)
+    setShowBigBangPopup(true)
   }
 
   // Get completed rooms from game session (any completed room)
@@ -123,6 +140,30 @@ export default function AstralNexus() {
       <CosmicBackground />
       <ProgressTracker completedRooms={completedRooms} failedRooms={failedRooms} />
 
+      {/* Confirmation Popup for ending session */}
+      <AlertDialog open={showConfirmEndSession} onOpenChange={setShowConfirmEndSession}>
+        <AlertDialogContent className="glassmorphism border-red-400/50 max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-cinzel text-2xl font-bold text-center text-red-400">
+              End Current Quest?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center space-y-3">
+              <p className="font-poppins text-red-200">
+                This quest will be counted as completed. Are you sure you want to start a new quest?
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" className="border-red-400/30 text-red-300 w-full" onClick={() => setShowConfirmEndSession(false)}>
+              No, Return to Nexus
+            </Button>
+            <Button className="mystical-button w-full" onClick={handleEndSessionAndStartNew}>
+              Yes, End Quest
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Big Bang Popup */}
       <BigBangPopup isOpen={showBigBangPopup} onClose={() => setShowBigBangPopup(false)} />
 
@@ -141,6 +182,7 @@ export default function AstralNexus() {
             </p>
 
             {/* Quest Status Card */}
+            {/* If not logged in, show connect card */}
             {!session ? (
               <Card className="glassmorphism border-purple-400/30 p-6 max-w-md mx-auto">
                 <div className="text-center">
@@ -156,7 +198,7 @@ export default function AstralNexus() {
                   </Button>
                 </div>
               </Card>
-            ) : !sessionId ? (
+            ) : !sessionId || !gameSession ? (
               <Card className="glassmorphism border-purple-400/30 p-6 max-w-md mx-auto">
                 <div className="text-center">
                   <CelestialIcon type="eye" size="lg" className="text-purple-400 mx-auto mb-4" />
@@ -197,7 +239,7 @@ export default function AstralNexus() {
                       Chambers Explored: {completedRooms.length} / 4
                     </div>
                     <Button 
-                      onClick={() => setShowBigBangPopup(true)} 
+                      onClick={() => setShowConfirmEndSession(true)} 
                       variant="outline"
                       className="border-purple-400/30 text-purple-200 hover:bg-purple-500/10 w-full bg-transparent"
                     >
@@ -211,59 +253,67 @@ export default function AstralNexus() {
           </div>
 
           {/* Planet Grid - Centered */}
-          <div className="flex justify-center mb-12">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl">
-              {planets.map((planet, index) => (
-                <Card
-                  key={planet.id}
-                  className={`glassmorphism ${planet.borderColor} p-6 cursor-pointer transition-all duration-300 group relative overflow-hidden`}
-                  style={{
-                    backgroundImage: `url('/images/golden-frame.png')`,
-                    backgroundSize: "cover",
-                    backgroundPosition: "center",
-                    backgroundRepeat: "no-repeat",
-                  }}
-                  onMouseEnter={() => setHoveredPlanet(planet.id)}
-                  onMouseLeave={() => setHoveredPlanet(null)}
-                >
-                  {/* Card overlay for readability */}
-                  <div className="absolute inset-0 bg-black/40" />
-
-                  <Link href={planet.href}>
-                    <div className="text-center relative z-10">
-                      {/* Planet Icon */}
-                      <div
-                        className={`w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br ${planet.color} flex items-center justify-center group-hover:pulse-glow transition-all duration-300`}
-                      >
-                        {planet.icon}
+          {sessionId && gameSession && (
+            <div className="flex justify-center mb-12">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl">
+                {planets.map((planet, index) => {
+                  const isCompleted = completedRooms.includes(planet.id)
+                  return (
+                    <Card
+                      key={planet.id}
+                      className={`glassmorphism ${planet.borderColor} p-6 cursor-pointer transition-all duration-300 group relative overflow-hidden`}
+                      style={{
+                        backgroundImage: `url('/images/golden-frame.png')`,
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
+                        backgroundRepeat: "no-repeat",
+                      }}
+                      onMouseEnter={() => setHoveredPlanet(planet.id)}
+                      onMouseLeave={() => setHoveredPlanet(null)}
+                    >
+                      {/* Card overlay for readability */}
+                      <div className="absolute inset-0 bg-black/40" />
+                      <div className="text-center relative z-10">
+                        {/* Planet Icon */}
+                        <div
+                          className={`w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br ${planet.color} flex items-center justify-center group-hover:pulse-glow transition-all duration-300`}
+                        >
+                          {planet.icon}
+                        </div>
+                        {/* Planet Info */}
+                        <h3 className="font-cormorant text-2xl font-bold text-gold-100 mb-2">{planet.name}</h3>
+                        <h4 className="font-poppins text-sm text-purple-300 mb-3 italic">{planet.subtitle}</h4>
+                        {/* Description (shown on hover) */}
+                        <div
+                          className={`transition-all duration-300 ${
+                            hoveredPlanet === planet.id ? "opacity-100 max-h-20" : "opacity-0 max-h-0"
+                          } overflow-hidden`}
+                        >
+                          <p className="font-poppins text-sm text-purple-200">{planet.description}</p>
+                        </div>
+                        {/* Enter Button or Chamber Explored */}
+                        <div className="mt-4">
+                          {isCompleted ? (
+                            <Button disabled className="bg-green-900/30 text-green-400 border-green-400/30 px-6 py-2 cursor-not-allowed">
+                              <CelestialIcon type="constellation" size="sm" className="mr-2" />
+                              Chamber Explored
+                            </Button>
+                          ) : (
+                            <Link href={planet.href}>
+                              <Button className="mystical-button text-sm px-6 py-2">
+                                <CelestialIcon type="constellation" size="sm" className="mr-2" />
+                                Enter Chamber
+                              </Button>
+                            </Link>
+                          )}
+                        </div>
                       </div>
-
-                      {/* Planet Info */}
-                      <h3 className="font-cormorant text-2xl font-bold text-gold-100 mb-2">{planet.name}</h3>
-                      <h4 className="font-poppins text-sm text-purple-300 mb-3 italic">{planet.subtitle}</h4>
-
-                      {/* Description (shown on hover) */}
-                      <div
-                        className={`transition-all duration-300 ${
-                          hoveredPlanet === planet.id ? "opacity-100 max-h-20" : "opacity-0 max-h-0"
-                        } overflow-hidden`}
-                      >
-                        <p className="font-poppins text-sm text-purple-200">{planet.description}</p>
-                      </div>
-
-                      {/* Enter Button */}
-                      <div className="mt-4">
-                        <Button className="mystical-button text-sm px-6 py-2">
-                          <CelestialIcon type="constellation" size="sm" className="mr-2" />
-                          Enter Chamber
-                        </Button>
-                      </div>
-                    </div>
-                  </Link>
-                </Card>
-              ))}
+                    </Card>
+                  )
+                })}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Progress Card - Centered */}
           <div className="flex justify-center">

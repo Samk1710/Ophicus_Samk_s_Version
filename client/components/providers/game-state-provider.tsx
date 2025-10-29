@@ -71,6 +71,12 @@ export const useGameState = create<GameState>((set: (partial: Partial<GameState>
       const data = await response.json();
 
       if (!response.ok) {
+        // If session not found (404), clear the invalid sessionId
+        if (response.status === 404) {
+          console.log('[GameState] Session not found, clearing sessionId');
+          get().setSessionId(null);
+          set({ gameSession: null });
+        }
         throw new Error(data.error || 'Failed to fetch game state');
       }
 

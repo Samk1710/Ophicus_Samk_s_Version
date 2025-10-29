@@ -1,9 +1,20 @@
 "use client"
 
 import Link from "next/link"
+import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { CelestialIcon } from "@/components/celestial-icon"
 import { CheckCircle, Globe, Flame, Rainbow, Crown, Sparkles } from "lucide-react"
 import { useGameState } from "@/components/providers/game-state-provider"
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { Button } from "@/components/ui/button"
 
 interface ProgressTrackerProps {
   completedRooms: string[]
@@ -24,9 +35,50 @@ const rooms = [
 ]
 
 export function ProgressTracker({ completedRooms, failedRooms = [], currentRoom }: ProgressTrackerProps) {
-  const { gameSession } = useGameState()
+  const { gameSession, sessionId } = useGameState()
+  const router = useRouter()
+  const [showSkipDialog, setShowSkipDialog] = useState(false)
+  const [isSkipping, setIsSkipping] = useState(false)
   
   const totalPoints = gameSession?.totalPoints || 0
+  const allRoomsCompleted = completedRooms.length === 4
+  
+  const handleSkipToRevelation = async () => {
+    if (!sessionId) {
+      alert('No active session found')
+      return
+    }
+    
+    setIsSkipping(true)
+    
+    try {
+      // Mark all rooms as completed with 0 points
+      const roomsToComplete = ['nebula', 'cradle', 'comet', 'aurora']
+      
+      for (const room of roomsToComplete) {
+        if (!completedRooms.includes(room)) {
+          // Call a special endpoint to mark room as skipped (0 points)
+          await fetch(`/api/rooms/skip`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              sessionId,
+              roomId: room,
+            }),
+          })
+        }
+      }
+      
+      // Navigate to revelation
+      setShowSkipDialog(false)
+      router.push('/final-guess')
+    } catch (error) {
+      console.error('[ProgressTracker] Failed to skip rooms:', error)
+      alert('Failed to skip to revelation. Please try again.')
+    } finally {
+      setIsSkipping(false)
+    }
+  }
   
   return (
     <div className="fixed top-20 right-6 z-50">
@@ -110,15 +162,63 @@ export function ProgressTracker({ completedRooms, failedRooms = [], currentRoom 
         )}
 
         {/* Revelation Link */}
-        <Link href="/final-guess">
-          <div className="w-full p-2 rounded-lg bg-gradient-to-r from-gold-500/20 to-purple-600/20 border border-gold-400/30 hover:from-gold-500/30 hover:to-purple-500/30 transition-all duration-300 cursor-pointer">
+        {allRoomsCompleted ? (
+          <Link href="/final-guess">
+            <div className="w-full p-2 rounded-lg bg-gradient-to-r from-gold-500/20 to-purple-600/20 border border-gold-400/30 hover:from-gold-500/30 hover:to-purple-500/30 transition-all duration-300 cursor-pointer">
+              <div className="flex items-center justify-center gap-2">
+                <Crown className="w-4 h-4 text-gold-400" />
+                <span className="text-xs font-poppins text-gold-200">Revelation</span>
+              </div>
+            </div>
+          </Link>
+        ) : sessionId ? (
+          <div 
+            onClick={() => setShowSkipDialog(true)}
+            className="w-full p-2 rounded-lg bg-gradient-to-r from-purple-500/20 to-red-600/20 border border-purple-400/30 hover:from-purple-500/30 hover:to-red-500/30 transition-all duration-300 cursor-pointer"
+          >
             <div className="flex items-center justify-center gap-2">
-              <Crown className="w-4 h-4 text-gold-400" />
-              <span className="text-xs font-poppins text-gold-200">Revelation</span>
+              <Crown className="w-4 h-4 text-purple-400" />
+              <span className="text-xs font-poppins text-purple-200">Skip to Revelation</span>
             </div>
           </div>
-        </Link>
+        ) : null}
       </div>
+      
+      {/* Skip Confirmation Dialog */}
+      <AlertDialog open={showSkipDialog} onOpenChange={setShowSkipDialog}>
+        <AlertDialogContent className="glassmorphism border-purple-400/50 max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-cinzel text-2xl font-bold text-center text-purple-100">
+              Skip Cosmic Rooms?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center space-y-3">
+              <p className="font-poppins text-purple-200">
+                Are you sure you want to skip the cosmic rooms and go directly to the revelation?
+              </p>
+              <p className="font-poppins text-sm text-red-400">
+                All room points will be set to zero.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <Button 
+              variant="outline" 
+              className="border-purple-400/30 text-purple-300 hover:bg-purple-500/10 w-full bg-transparent"
+              onClick={() => setShowSkipDialog(false)}
+              disabled={isSkipping}
+            >
+              No, Continue Quest
+            </Button>
+            <Button 
+              className="mystical-button w-full"
+              onClick={handleSkipToRevelation}
+              disabled={isSkipping}
+            >
+              {isSkipping ? 'Skipping...' : 'Yes, Skip Rooms'}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

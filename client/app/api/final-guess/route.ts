@@ -127,20 +127,37 @@ export async function POST(request: NextRequest) {
         }
       });
     } else {
-      const attemptsRemaining = 3 - result.session.finalGuessAttempts;
-      console.log(`⚠️  [POST /api/final-guess] Attempts remaining: ${attemptsRemaining}/3`);
+      // Safely calculate attempts remaining (prevent negative values)
+      const attemptsRemaining = Math.max(0, 3 - result.session.finalGuessAttempts);
+      const gameOver = result.session.finalGuessAttempts >= 3;
+      
+      console.log(`⚠️  [POST /api/final-guess] Attempts: ${result.session.finalGuessAttempts}/3, Remaining: ${attemptsRemaining}`);
       
       let pointsEarned = 0;
+      let cosmicSongRevealed = null;
       
-      if (attemptsRemaining === 0) {
+      if (gameOver) {
         console.log('💔 [POST /api/final-guess] GAME OVER - All attempts exhausted');
         
         // Award 25 points for trying
         pointsEarned = 25;
         result.session.totalPoints = (result.session.totalPoints || 0) + pointsEarned;
         
+        // Build roomPoints for summary
+        const roomPoints = {
+          nebula: result.session.roomClues?.nebula?.points || 0,
+          cradle: result.session.roomClues?.cradle?.points || 0,
+          comet: result.session.roomClues?.comet?.points || 0,
+          aurora: result.session.roomClues?.aurora?.points || 0,
+          nova: result.session.roomClues?.nova?.points || 0
+        };
+        
+        // Reveal the cosmic song for the failure popup
+        cosmicSongRevealed = result.session.cosmicSong;
+        
         console.log(`🎁 [POST /api/final-guess] Consolation points awarded: ${pointsEarned}`);
         console.log(`📊 [POST /api/final-guess] Final total points: ${result.session.totalPoints}`);
+        console.log(`🎵 [POST /api/final-guess] Cosmic song revealed: ${cosmicSongRevealed?.name}`);
         
         // Mark session as completed (failed) and archive it
         try {
@@ -159,9 +176,25 @@ export async function POST(request: NextRequest) {
         success: true,
         correct: false,
         attemptsRemaining,
-        gameOver: attemptsRemaining === 0,
+        gameOver,
         pointsEarned,
-        totalPoints: result.session.totalPoints
+        totalPoints: result.session.totalPoints,
+        ...(gameOver && {
+          cosmicSong: cosmicSongRevealed,
+          questSummary: {
+            cosmicSong: cosmicSongRevealed,
+            roomPoints: {
+              nebula: result.session.roomClues?.nebula?.points || 0,
+              cradle: result.session.roomClues?.cradle?.points || 0,
+              comet: result.session.roomClues?.comet?.points || 0,
+              aurora: result.session.roomClues?.aurora?.points || 0,
+              nova: result.session.roomClues?.nova?.points || 0
+            },
+            revelationPoints: pointsEarned,
+            totalPoints: result.session.totalPoints,
+            finalGuessAttempts: result.session.finalGuessAttempts
+          }
+        })
       });
     }
 
