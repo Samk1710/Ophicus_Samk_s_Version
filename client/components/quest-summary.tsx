@@ -123,7 +123,7 @@ export function QuestSummary({ isOpen, onClose, questData }: QuestSummaryProps) 
             </div>
             <div className="space-y-3">
               {rooms.map((room) => {
-                const points = questData.roomPoints[room.id as keyof typeof questData.roomPoints] || 0
+                const points = questData?.roomPoints?.[room.id as keyof typeof questData.roomPoints] || 0
                 return (
                   <div key={room.id} className="flex items-center justify-between p-3 bg-black/20 rounded-lg">
                     <div className="flex items-center gap-3">
@@ -144,7 +144,7 @@ export function QuestSummary({ isOpen, onClose, questData }: QuestSummaryProps) 
                   <span className="font-poppins text-gold-200">Final Revelation</span>
                 </div>
                 <span className="font-cinzel text-lg font-bold text-gold-100">
-                  {questData.revelationPoints} pts
+                  {questData?.revelationPoints || 0} pts
                 </span>
               </div>
             </div>
@@ -160,7 +160,7 @@ export function QuestSummary({ isOpen, onClose, questData }: QuestSummaryProps) 
                 <div>
                   <p className="font-poppins text-sm text-purple-300">Total Quest Points</p>
                   <p className="font-cinzel text-3xl font-bold text-gold-100">
-                    {questData.totalPoints}
+                    {questData?.totalPoints || 0}
                   </p>
                 </div>
               </div>

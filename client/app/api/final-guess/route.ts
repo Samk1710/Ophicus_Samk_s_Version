@@ -86,6 +86,15 @@ export async function POST(request: NextRequest) {
       console.log('🎊 QUEST COMPLETE! User has achieved cosmic enlightenment!');
       console.log('='.repeat(80) + '\n');
 
+      // Build roomPoints object from roomClues
+      const roomPoints = {
+        nebula: result.session.roomClues?.nebula?.points || 0,
+        cradle: result.session.roomClues?.cradle?.points || 0,
+        comet: result.session.roomClues?.comet?.points || 0,
+        aurora: result.session.roomClues?.aurora?.points || 0,
+        nova: result.session.roomClues?.nova?.points || 0
+      };
+
       // Mark session as completed but DON'T delete it yet
       try {
         result.session.completed = true;
@@ -111,7 +120,7 @@ export async function POST(request: NextRequest) {
         questSummary: {
           cosmicSong: result.session.cosmicSong,
           ophiuchusIdentity: identity,
-          roomPoints: result.session.roomPoints,
+          roomPoints: roomPoints,
           revelationPoints: attemptPoints,
           totalPoints: result.session.totalPoints,
           finalGuessAttempts: result.session.finalGuessAttempts
