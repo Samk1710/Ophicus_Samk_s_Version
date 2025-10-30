@@ -54,7 +54,8 @@ export async function completeGameSession(sessionId: string): Promise<void> {
     {
       $set: {
         spotifyUserId: session.spotifyUserId,
-        username: session.userId, // Could be enhanced with actual username
+  // Store Spotify username as the canonical username
+  username: session.spotifyUserId || session.userId,
         lastPlayedAt: new Date()
       },
       $inc: {
@@ -89,7 +90,8 @@ export async function completeGameSession(sessionId: string): Promise<void> {
     { userId: session.userId },
     {
       $set: {
-        username: session.userId,
+  // Use Spotify username for leaderboard display
+  username: session.spotifyUserId || session.userId,
         spotifyUserId: session.spotifyUserId,
         lastPlayedAt: new Date(),
         totalPoints: totalPointsSum // Use calculated sum instead of incrementing

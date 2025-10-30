@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { CosmicBackground } from "@/components/cosmic-background"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -12,17 +12,23 @@ import { motion } from "framer-motion"
 
 export default function ResultsPage() {
   const router = useRouter()
-  const searchParams = useSearchParams()
   const [showSummary, setShowSummary] = useState(false)
   const [questData, setQuestData] = useState<any>(null)
   const [result, setResult] = useState<'success' | 'failure' | null>(null)
+  const [mounted, setMounted] = useState(false)
+
+  // Prevent hydration mismatch by only rendering content after mount
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
-    // Get data from URL params or localStorage
-    const resultType = searchParams.get('result')
-    const dataStr = searchParams.get('data') || localStorage.getItem('questResultData')
-    
-    if (resultType && dataStr) {
+  // Get data from URL params or localStorage
+  const params = new URLSearchParams(window.location.search)
+  const resultType = params.get('result')
+  const dataStr = params.get('data') || localStorage.getItem('questResultData')
+
+  if (resultType && dataStr) {
       setResult(resultType as 'success' | 'failure')
       try {
         const parsedData = JSON.parse(decodeURIComponent(dataStr))
@@ -43,7 +49,7 @@ export default function ResultsPage() {
       // No data, redirect to nexus
       router.push('/astral-nexus')
     }
-  }, [searchParams, router])
+  }, [router])
 
   const celebrateVictory = () => {
     const duration = 5000
@@ -94,7 +100,8 @@ export default function ResultsPage() {
     }, 100)
   }
 
-  if (!questData || !result) {
+  // Show loading state until mounted (prevents hydration mismatch)
+  if (!mounted || !questData || !result) {
     return (
       <div className="min-h-screen flex items-center justify-center cosmic-bg">
         <CosmicBackground />
@@ -131,10 +138,6 @@ export default function ResultsPage() {
             transition={{ repeat: Infinity, duration: 2 }}
             className="absolute bottom-8 left-1/2 transform -translate-x-1/2"
           >
-            <div className="flex flex-col items-center gap-2">
-              <p className="font-poppins text-xs text-purple-400">Scroll for summary</p>
-              <ArrowDown className="w-6 h-6 text-purple-400" />
-            </div>
           </motion.div>
         </motion.div>
 
@@ -315,7 +318,7 @@ function FailureReveal({ questData, onContinue }: { questData: any; onContinue: 
             onClick={onContinue}
             className="mystical-button w-full text-base sm:text-lg py-6 bg-red-600/20 hover:bg-red-600/30 border-red-400/50"
           >
-            <PartyPopper className="w-5 h-5 mr-2" />
+            <PartyPopper className="w-5 h-5 mr-2 text-white" />
             View Quest Summary
           </Button>
         </div>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { CosmicBackground } from "@/components/cosmic-background"
+import { CosmicLoading } from "@/components/cosmic-loading"
 import { ProgressTracker } from "@/components/progress-tracker"
 import { CelestialIcon } from "@/components/celestial-icon"
 import { Card } from "@/components/ui/card"
@@ -136,11 +137,7 @@ export default function NovaRoom() {
     : []
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-yellow-400" />
-      </div>
-    )
+    return <CosmicLoading message="The cosmic memories align... prepare to recall the echoes" />
   }
 
   if (showResults) {
@@ -179,7 +176,7 @@ export default function NovaRoom() {
                 </p>
               </div>
 
-              {/* Clue Fragment */}
+              {/* Clue Fragment or Reveal Song on Failure */}
               {isCompleted && clueText ? (
                 <div className="bg-purple-900/20 rounded-lg p-6 border border-purple-400/30">
                   <h4 className="font-cormorant text-lg font-bold text-purple-100 mb-3">Memory Fragment Revealed</h4>
@@ -188,22 +185,52 @@ export default function NovaRoom() {
                   </p>
                 </div>
               ) : (
-                <div className="bg-red-900/20 rounded-lg p-6 border border-red-400/30">
-                  <h4 className="font-cormorant text-lg font-bold text-red-100 mb-3">Score Too Low</h4>
-                  <p className="font-poppins text-red-200">
-                    Your alignment with the cosmic frequency needs to be stronger. Try again to unlock the clue.
-                  </p>
+                <>
+                  <div className="bg-red-900/20 rounded-lg p-6 border border-red-400/30 mb-4">
+                    <h4 className="font-cormorant text-lg font-bold text-red-100 mb-3">Score Too Low 💫</h4>
+                    <p className="font-poppins text-red-200 mb-4">
+                      Your alignment with the cosmic frequency wasn't strong enough. The memories reveal...
+                    </p>
+                    
+                    {/* Reveal the Correct Song */}
+                    {gameSession?.cosmicSong && (
+                      <div className="bg-black/30 rounded-lg p-4 border border-yellow-400/30">
+                        <p className="text-yellow-200 font-poppins text-sm mb-3">The song was:</p>
+                        {gameSession.cosmicSong.imageUrl && (
+                          <img 
+                            src={gameSession.cosmicSong.imageUrl} 
+                            alt={gameSession.cosmicSong.name}
+                            className="w-32 h-32 mx-auto rounded-lg border-2 border-yellow-400/50 object-cover mb-3"
+                          />
+                        )}
+                        <p className="font-cormorant text-xl font-bold text-yellow-100">
+                          "{gameSession.cosmicSong.name}"
+                        </p>
+                        <p className="font-poppins text-sm text-yellow-200 mt-1">
+                          by {gameSession.cosmicSong.artists.join(', ')}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  
                   <Button 
                     onClick={() => {
-                      setShowResults(false)
-                      setCurrentQuestion(0)
-                      setAnswers(answers.map(q => ({ ...q, selectedAnswer: undefined })))
+                      // Store the revealed song for astral-nexus to show
+                      if (gameSession?.intermediarySongs?.[0]) {
+                        localStorage.setItem('lastRevealedAnswer', JSON.stringify({
+                          room: 'Nova',
+                          song: gameSession.intermediarySongs[0],
+                          emoji: '⭐',
+                          timestamp: Date.now()
+                        }))
+                      }
+                      router.push('/astral-nexus')
                     }}
-                    className="mystical-button mt-4"
+                    className="mystical-button w-full"
                   >
-                    Try Again
+                    Continue Journey
                   </Button>
-                </div>
+                </>
               )}
             </Card>
           </div>

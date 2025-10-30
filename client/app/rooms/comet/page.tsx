@@ -37,6 +37,7 @@ export default function CometRoom() {
   const [showSuccessDialog, setShowSuccessDialog] = useState(false)
   const [showFailureDialog, setShowFailureDialog] = useState(false)
   const [earnedPoints, setEarnedPoints] = useState(0)
+  const [revealedSong, setRevealedSong] = useState<any>(null)
   const { sessionId, gameSession, refreshGameState } = useGameState()
   const router = useRouter()
 
@@ -105,9 +106,8 @@ export default function CometRoom() {
       setIsCompleted(true)
       setShowLyric(false)
       setShowInput(false)
-      setShowFailureDialog(true)
       
-      // Mark room as failed with 0 points
+      // Mark room as failed with 0 points and get revealed song
       fetch('/api/rooms/comet', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -116,7 +116,13 @@ export default function CometRoom() {
           guessedTrackId: 'timeout', // Special value to indicate timeout
           timeout: true
         })
-      }).then(() => refreshGameState())
+      })
+      .then(res => res.json())
+      .then(data => {
+        setRevealedSong(data.revealedSong || null)
+        setShowFailureDialog(true)
+        refreshGameState()
+      })
     }
   }, [timeLeft, showLyric, isCompleted, sessionId, refreshGameState])
 
@@ -154,8 +160,9 @@ export default function CometRoom() {
         setShowSuccessDialog(true)
         await refreshGameState()
       } else {
-        // Comet only has ONE CHANCE - show failure
+        // Comet only has ONE CHANCE - show failure and reveal song
         setIsCompleted(true)
+        setRevealedSong(data.revealedSong || null)
         setShowFailureDialog(true)
         await refreshGameState()
       }
@@ -383,31 +390,45 @@ export default function CometRoom() {
 
       {/* Failure Dialog */}
       <AlertDialog open={showFailureDialog} onOpenChange={setShowFailureDialog}>
-        <AlertDialogContent className="glassmorphism border-red-400/50">
+        <AlertDialogContent className="glassmorphism border-red-400/50 max-w-md">
           <AlertDialogHeader>
             <div className="flex justify-center mb-4">
               <XCircle className="w-16 h-16 text-red-400" />
             </div>
             <AlertDialogTitle className="text-center text-2xl font-cinzel text-red-100">
-              Not Quite... 💫
+              Time Expired 💫
             </AlertDialogTitle>
             <AlertDialogDescription className="text-center space-y-4">
               <p className="text-red-200 font-poppins">
-                The comet has passed. You only had one chance!
+                The comet has passed beyond your reach...
               </p>
+              
               <div className="bg-red-900/20 rounded-lg p-4 border border-red-400/30">
                 <p className="text-red-200 font-poppins text-sm">
                   No points earned this time.
                 </p>
+                <p className="text-orange-300 font-poppins text-xs mt-2 italic">
+                  The answer will be revealed in the Astral Nexus 🌌
+                </p>
               </div>
+              
               <Button 
                 onClick={() => {
                   setShowFailureDialog(false)
-                  router.push('/home')
+                  // Store the revealed song for astral-nexus to show
+                  if (revealedSong) {
+                    localStorage.setItem('lastRevealedAnswer', JSON.stringify({
+                      room: 'Comet',
+                      song: revealedSong,
+                      emoji: '🔥',
+                      timestamp: Date.now()
+                    }))
+                  }
+                  router.push('/astral-nexus')
                 }}
                 className="mystical-button w-full mt-4"
               >
-                Continue Journey
+                Continue to Astral Nexus
               </Button>
             </AlertDialogDescription>
           </AlertDialogHeader>

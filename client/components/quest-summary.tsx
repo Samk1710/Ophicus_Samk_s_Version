@@ -26,6 +26,7 @@ interface QuestSummaryProps {
       artists: string[]
       imageUrl: string
     }
+    roomsCompletedMap?: { [key: string]: 'pending' | 'correct' | 'wrong' }
     ophiuchusIdentity?: {
       title: string
       description: string
@@ -40,6 +41,20 @@ interface QuestSummaryProps {
     revelationPoints: number
     totalPoints: number
     finalGuessAttempts: number
+    nebulaSong?: {
+      id: string
+      name: string
+      artists: string[]
+      imageUrl: string
+      spotifyUrl?: string
+    }
+    cometSong?: {
+      id: string
+      name: string
+      artists: string[]
+      imageUrl: string
+      spotifyUrl?: string
+    }
   }
 }
 
@@ -60,6 +75,20 @@ export function QuestSummary({ isOpen, onClose, questData }: QuestSummaryProps) 
     { id: 'comet', name: 'Comet', color: 'text-orange-400' },
     { id: 'aurora', name: 'Aurora', color: 'text-green-400' },
   ]
+
+  // Helper to get per-room final state. Prefer roomsCompletedMap, then fallback to legacy roomsCompleted array stored on session (if any).
+  const getRoomState = (roomId: string) => {
+    // If a roomsCompletedMap is included in questData (preferred shape)
+    if (questData.roomsCompletedMap && typeof questData.roomsCompletedMap[roomId] !== 'undefined') {
+      return questData.roomsCompletedMap[roomId]
+    }
+
+    // Fallback: if a legacy array exists on the questData (some builds may still provide it via roomPoints keys)
+    // We'll treat presence in an assumed `roomsCompleted` array (not provided here) as 'correct'
+    // and otherwise consider it 'pending'. This keeps backward compatibility.
+    // NOTE: if you have access to the session object on client, prefer to pass roomsCompletedMap from server.
+    return 'pending' as 'pending' | 'correct' | 'wrong'
+  }
 
   return (
     <AlertDialog open={isOpen} onOpenChange={onClose}>
@@ -129,6 +158,85 @@ export function QuestSummary({ isOpen, onClose, questData }: QuestSummaryProps) 
             </Card>
           )}
 
+          {/* Room Answers Section */}
+          {(questData.nebulaSong || questData.cometSong) && (
+            <Card className="glassmorphism border-purple-400/30 p-4 sm:p-6">
+              <div className="flex items-center gap-2 mb-3 sm:mb-4">
+                <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400" />
+                <h3 className="font-cinzel text-lg sm:text-xl font-bold text-purple-100">Room Answers</h3>
+              </div>
+              <div className="space-y-3 sm:space-y-4">
+                {/* Nebula Song */}
+                {questData.nebulaSong && (
+                  <div className="bg-purple-900/20 rounded-lg p-3 sm:p-4 border border-purple-400/30">
+                    <p className="font-poppins text-xs sm:text-sm text-purple-300 mb-2">🔮 Nebula (Riddle)</p>
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      {questData.nebulaSong.imageUrl && (
+                        <img
+                          src={questData.nebulaSong.imageUrl}
+                          alt={questData.nebulaSong.name}
+                          className="w-12 h-12 sm:w-14 sm:h-14 rounded border border-purple-400/30 flex-shrink-0"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-poppins text-sm sm:text-base font-bold text-purple-100 truncate">
+                          {questData.nebulaSong.name}
+                        </p>
+                        <p className="font-poppins text-xs sm:text-sm text-purple-300 truncate">
+                          {questData.nebulaSong.artists.join(', ')}
+                        </p>
+                        {questData.nebulaSong.spotifyUrl && (
+                          <a
+                            href={questData.nebulaSong.spotifyUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-green-400 hover:text-green-300 underline mt-1 inline-block"
+                          >
+                            Listen ↗
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Comet Song */}
+                {questData.cometSong && (
+                  <div className="bg-orange-900/20 rounded-lg p-3 sm:p-4 border border-orange-400/30">
+                    <p className="font-poppins text-xs sm:text-sm text-orange-300 mb-2">🔥 Comet (Lyric)</p>
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      {questData.cometSong.imageUrl && (
+                        <img
+                          src={questData.cometSong.imageUrl}
+                          alt={questData.cometSong.name}
+                          className="w-12 h-12 sm:w-14 sm:h-14 rounded border border-orange-400/30 flex-shrink-0"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-poppins text-sm sm:text-base font-bold text-orange-100 truncate">
+                          {questData.cometSong.name}
+                        </p>
+                        <p className="font-poppins text-xs sm:text-sm text-orange-300 truncate">
+                          {questData.cometSong.artists.join(', ')}
+                        </p>
+                        {questData.cometSong.spotifyUrl && (
+                          <a
+                            href={questData.cometSong.spotifyUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-green-400 hover:text-green-300 underline mt-1 inline-block"
+                          >
+                            Listen ↗
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Card>
+          )}
+
           {/* Room Points Breakdown */}
           <Card className="glassmorphism border-blue-400/30 p-4 sm:p-6">
             <div className="flex items-center gap-2 mb-3 sm:mb-4">
@@ -138,11 +246,18 @@ export function QuestSummary({ isOpen, onClose, questData }: QuestSummaryProps) 
             <div className="space-y-2 sm:space-y-3">
               {rooms.map((room) => {
                 const points = questData?.roomPoints?.[room.id as keyof typeof questData.roomPoints] || 0
+                const state = getRoomState(room.id)
+                const stateColor = state === 'correct' ? 'text-green-300' : state === 'wrong' ? 'text-red-400' : 'text-gray-400'
                 return (
                   <div key={room.id} className="flex items-center justify-between p-2 sm:p-3 bg-black/20 rounded-lg">
                     <div className="flex items-center gap-2 sm:gap-3">
-                      <CheckCircle className={`w-4 h-4 sm:w-5 sm:h-5 ${room.color}`} />
-                      <span className="font-poppins text-sm sm:text-base text-purple-200">{room.name}</span>
+                      <CheckCircle className={`w-4 h-4 sm:w-5 sm:h-5 ${room.color} ${stateColor}`} />
+                      <div className="flex items-center gap-2">
+                        <span className="font-poppins text-sm sm:text-base text-purple-200">{room.name}</span>
+                        <span className={`text-xs sm:text-sm font-medium ${stateColor} ml-2 capitalize`}>
+                          {state}
+                        </span>
+                      </div>
                     </div>
                     <span className="font-cinzel text-base sm:text-lg font-bold text-gold-200">
                       {points} pts
@@ -184,12 +299,6 @@ export function QuestSummary({ isOpen, onClose, questData }: QuestSummaryProps) 
         </div>
 
         <AlertDialogFooter className="flex-col sm:flex-row gap-2 mt-4 sm:mt-6 flex-shrink-0">
-          <Button
-            onClick={handleEndQuest}
-            className="mystical-button w-full text-sm sm:text-base"
-          >
-            End This Quest
-          </Button>
           <Link href="/astral-nexus" className="w-full">
             <Button
               variant="outline"

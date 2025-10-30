@@ -224,7 +224,10 @@ export default function MyQuestsPage() {
                             variant="outline"
                             className="bg-gold-500/10 text-gold-400 border-gold-400/30"
                           >
-                            Revelation: {quest.revelationPoints}pts
+                            Revelation: {(() => {
+                              const roomPointsSum = Object.values(quest.roomPoints).reduce((sum, pts) => sum + (pts || 0), 0)
+                              return quest.totalPoints - roomPointsSum
+                            })()}pts
                           </Badge>
                         </div>
 

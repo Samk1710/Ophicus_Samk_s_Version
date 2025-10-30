@@ -96,6 +96,13 @@ export async function POST(request: NextRequest) {
         nova: result.session.roomClues?.nova?.points || 0
       };
 
+      // Extract Nebula and Comet songs from intermediarySongs
+      const nebulaSong = result.session.intermediarySongs?.[0] || null;
+      const cometSong = result.session.intermediarySongs?.[1] || null;
+
+      console.log('🔮 [POST /api/final-guess] Nebula song:', nebulaSong?.name);
+      console.log('🔥 [POST /api/final-guess] Comet song:', cometSong?.name);
+
       // Mark session as completed but DON'T delete it yet
       try {
         result.session.completed = true;
@@ -132,7 +139,9 @@ export async function POST(request: NextRequest) {
           roomPoints: roomPoints,
           revelationPoints: attemptPoints,
           totalPoints: result.session.totalPoints,
-          finalGuessAttempts: result.session.finalGuessAttempts
+          finalGuessAttempts: result.session.finalGuessAttempts,
+          nebulaSong: nebulaSong,
+          cometSong: cometSong
         }
       });
     } else {
@@ -163,10 +172,16 @@ export async function POST(request: NextRequest) {
         
         // Reveal the cosmic song for the failure popup
         cosmicSongRevealed = result.session.cosmicSong;
+
+        // Extract Nebula and Comet songs from intermediarySongs
+        const nebulaSong = result.session.intermediarySongs?.[0] || null;
+        const cometSong = result.session.intermediarySongs?.[1] || null;
         
         console.log(`🎁 [POST /api/final-guess] Consolation points awarded: ${pointsEarned}`);
         console.log(`📊 [POST /api/final-guess] Final total points: ${result.session.totalPoints}`);
         console.log(`🎵 [POST /api/final-guess] Cosmic song revealed: ${cosmicSongRevealed?.name}`);
+        console.log('🔮 [POST /api/final-guess] Nebula song:', nebulaSong?.name);
+        console.log('🔥 [POST /api/final-guess] Comet song:', cometSong?.name);
         
         // Mark session as completed (failed) and archive it
         try {
@@ -217,7 +232,9 @@ export async function POST(request: NextRequest) {
             },
             revelationPoints: pointsEarned,
             totalPoints: result.session.totalPoints,
-            finalGuessAttempts: result.session.finalGuessAttempts
+            finalGuessAttempts: result.session.finalGuessAttempts,
+            nebulaSong: result.session.intermediarySongs?.[0] || null,
+            cometSong: result.session.intermediarySongs?.[1] || null
           }
         })
       });

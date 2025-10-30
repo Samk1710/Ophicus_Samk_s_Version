@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { CosmicBackground } from "@/components/cosmic-background"
+import { CosmicLoading } from "@/components/cosmic-loading"
 import { CelestialIcon } from "@/components/celestial-icon"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -68,6 +69,11 @@ export default function LeaderboardPage() {
     if (rank === 2) return "from-gray-300/30 to-gray-500/30 border-gray-400/50"
     if (rank === 3) return "from-amber-500/30 to-orange-600/30 border-amber-400/50"
     return "from-purple-500/20 to-indigo-600/20 border-purple-400/30"
+  }
+
+  // Show loading screen while fetching initial data
+  if (isLoading && leaderboard.length === 0) {
+    return <CosmicLoading />
   }
 
   return (

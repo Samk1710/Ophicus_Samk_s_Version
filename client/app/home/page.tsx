@@ -21,6 +21,7 @@ import {
   Globe,
   Sparkles,
 } from "lucide-react"
+import { CosmicLoading } from "@/components/cosmic-loading"
 
 export default function HomePage() {
   const { data: session } = useSession()
@@ -38,6 +39,11 @@ export default function HomePage() {
       return () => clearInterval(interval);
     }
   }, [userData?.currentTrack?.is_playing]);
+
+  // Show loading screen while fetching initial data for logged-in users
+  if (session && loading && !userData) {
+    return <CosmicLoading />
+  }
 
   return (
     <div className="min-h-screen relative overflow-hidden">

@@ -447,33 +447,64 @@ export default function CradleRoom() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Failure Dialog */}
+      {/* Failure Dialog - Shows Correct Artist on Final Failure */}
       <AlertDialog open={showFailureDialog} onOpenChange={setShowFailureDialog}>
-        <AlertDialogContent className="glassmorphism border-yellow-400/50">
+        <AlertDialogContent className="glassmorphism border-yellow-400/50 max-w-md">
           <AlertDialogHeader>
             <div className="flex justify-center mb-4">
               <XCircle className="w-16 h-16 text-yellow-400" />
             </div>
             <AlertDialogTitle className="text-center text-2xl font-cinzel text-yellow-100">
-              Not Quite Right
+              {attemptsRemaining > 0 ? 'Not Quite Right' : 'Mystery Remains... 💫'}
             </AlertDialogTitle>
             <AlertDialogDescription className="text-center space-y-4">
-              <p className="text-yellow-200 font-poppins">
-                {attemptsRemaining > 0 
-                  ? `That's not the correct artist. You have ${attemptsRemaining} attempt${attemptsRemaining !== 1 ? 's' : ''} remaining.`
-                  : "You've used all your attempts, but the journey continues through other chambers."}
-              </p>
-              <Button 
-                onClick={() => {
-                  setShowFailureDialog(false)
-                  if (attemptsRemaining === 0) {
-                    router.push('/astral-nexus')
-                  }
-                }}
-                className="mystical-button w-full mt-4"
-              >
-                {attemptsRemaining > 0 ? 'Try Again' : 'Continue Journey'}
-              </Button>
+              {attemptsRemaining > 0 ? (
+                <>
+                  <p className="text-yellow-200 font-poppins">
+                    That's not the correct artist. You have {attemptsRemaining} attempt{attemptsRemaining !== 1 ? 's' : ''} remaining.
+                  </p>
+                  <Button 
+                    onClick={() => setShowFailureDialog(false)}
+                    className="mystical-button w-full mt-4"
+                  >
+                    Try Again
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <p className="text-yellow-200 font-poppins">
+                    You've used all your attempts...
+                  </p>
+                  
+                  <div className="bg-red-900/20 rounded-lg p-4 border border-red-400/30">
+                    <p className="text-red-200 font-poppins text-sm">
+                      No points earned this time.
+                    </p>
+                    <p className="text-blue-300 font-poppins text-xs mt-2 italic">
+                      The artist will be revealed in the Astral Nexus 🌌
+                    </p>
+                  </div>
+                  
+                  <Button 
+                    onClick={() => {
+                      setShowFailureDialog(false)
+                      // Store the revealed artist for astral-nexus to show
+                      if (gameSession?.intermediarySongs?.[1]) {
+                        localStorage.setItem('lastRevealedAnswer', JSON.stringify({
+                          room: 'Cradle',
+                          song: gameSession.intermediarySongs[1],
+                          emoji: '🌍',
+                          timestamp: Date.now()
+                        }))
+                      }
+                      router.push('/astral-nexus')
+                    }}
+                    className="mystical-button w-full mt-4"
+                  >
+                    Continue to Astral Nexus
+                  </Button>
+                </>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
         </AlertDialogContent>

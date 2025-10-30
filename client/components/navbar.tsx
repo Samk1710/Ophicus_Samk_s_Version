@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { CelestialIcon } from "@/components/celestial-icon"
 import UserProfile  from "@/components/user-profile"
 import { Menu, X, Home, Map, Trophy, User, Scroll } from "lucide-react"
+import Image from "next/image"
 
 const navItems = [
 	{ href: "/", label: "Origin", icon: Home },
@@ -25,11 +26,9 @@ export function Navbar() {
 			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 				<div className="flex items-center justify-between h-16">
 					{/* Logo */}
-					<Link href="/" className="flex items-center space-x-3">
-						<div className="w-8 h-8 rounded-full bg-gradient-to-br from-gold-500/30 to-purple-600/30 flex items-center justify-center">
-							<CelestialIcon type="eye" size="sm" className="text-gold-300" />
-						</div>
-						<span className="font-cinzel text-xl font-bold text-gold-100 hidden sm:block">
+					<Link href="/" className="flex items-center space-x-3 group">
+						
+						<span className="font-cinzel text-xl font-bold text-gold-100 hidden sm:block group-hover:text-gold-300 transition-colors duration-300">
 							Ophiuchus
 						</span>
 					</Link>

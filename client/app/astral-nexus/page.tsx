@@ -3,12 +3,13 @@
 import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
 import { CosmicBackground } from "@/components/cosmic-background"
+import { CosmicLoading } from "@/components/cosmic-loading"
 import { ProgressTracker } from "@/components/progress-tracker"
 import { CelestialIcon } from "@/components/celestial-icon"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { BigBangPopup } from "@/components/big-bang-popup"
-import { Globe, Flame, Rainbow, Star, Loader2, Crown, Music } from "lucide-react"
+import { Globe, Flame, Rainbow, Star, Loader2, Crown, Music, Sparkles } from "lucide-react"
 import Link from "next/link"
 import {
   AlertDialog,
@@ -69,16 +70,49 @@ export default function AstralNexus() {
   const [showBigBangPopup, setShowBigBangPopup] = useState(false)
   const [showConfirmEndSession, setShowConfirmEndSession] = useState(false)
   const [isBigBangLoading, setIsBigBangLoading] = useState(false)
+  const [isInitialLoading, setIsInitialLoading] = useState(true)
+  const [showAnswerReveal, setShowAnswerReveal] = useState(false)
+  const [revealedAnswer, setRevealedAnswer] = useState<any>(null)
   const { data: session } = useSession()
   const { sessionId, gameSession, initializeBigBang, refreshGameState } = useGameState()
   const router = useRouter()
 
+  // Check for revealed answer from localStorage
+  useEffect(() => {
+    const checkRevealedAnswer = () => {
+      const stored = localStorage.getItem('lastRevealedAnswer')
+      if (stored) {
+        try {
+          const data = JSON.parse(stored)
+          // Only show if it's recent (within last 10 seconds)
+          if (Date.now() - data.timestamp < 10000) {
+            console.log('[AstralNexus] Found revealed answer:', data)
+            setRevealedAnswer(data)
+            setShowAnswerReveal(true)
+            // Clear it so it doesn't show again
+            localStorage.removeItem('lastRevealedAnswer')
+          } else {
+            localStorage.removeItem('lastRevealedAnswer')
+          }
+        } catch (e) {
+          console.error('[AstralNexus] Failed to parse revealed answer:', e)
+          localStorage.removeItem('lastRevealedAnswer')
+        }
+      }
+    }
+    checkRevealedAnswer()
+  }, [])
+
   // Refresh game state when component mounts
   useEffect(() => {
     console.log('[AstralNexus] Component mounted, session ID:', sessionId)
-    if (sessionId) {
-      refreshGameState()
+    const loadData = async () => {
+      if (sessionId) {
+        await refreshGameState()
+      }
+      setIsInitialLoading(false)
     }
+    loadData()
   }, [sessionId])
 
   // Log game session data
@@ -147,6 +181,11 @@ export default function AstralNexus() {
       router.push('/final-guess');
     }
   }, [completedRooms.length, gameSession?.completed, router]);
+
+  // Show loading screen while initializing
+  if (isInitialLoading) {
+    return <CosmicLoading />
+  }
 
   return (
     <div className="min-h-screen relative overflow-hidden cosmic-bg">
@@ -369,6 +408,62 @@ export default function AstralNexus() {
           </div>
         </div>
       </div>
+
+      {/* Answer Reveal Dialog */}
+      <AlertDialog open={showAnswerReveal} onOpenChange={setShowAnswerReveal}>
+        <AlertDialogContent className="glassmorphism border-gold-400/50 max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-cinzel text-2xl font-bold text-center text-purple-100 flex items-center justify-center gap-2">
+              <Sparkles className="w-6 h-6 text-gold-400" />
+              {revealedAnswer?.room} Answer Revealed
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center space-y-4">
+              {revealedAnswer?.song && (
+                <div className="bg-black/30 rounded-lg p-6 border border-gold-400/30">
+                  <p className="text-gold-200 font-poppins text-sm mb-4">
+                    The answer was:
+                  </p>
+                  {revealedAnswer.song.imageUrl && (
+                    <img 
+                      src={revealedAnswer.song.imageUrl} 
+                      alt={revealedAnswer.song.name}
+                      className="w-48 h-48 mx-auto rounded-lg border-2 border-gold-400/50 object-cover mb-4 shadow-lg"
+                    />
+                  )}
+                  <p className="font-cormorant text-2xl font-bold text-gold-100 mb-2">
+                    "{revealedAnswer.song.name}"
+                  </p>
+                  <p className="font-poppins text-lg text-gold-200">
+                    by {revealedAnswer.song.artists.join(', ')}
+                  </p>
+                  {revealedAnswer.song.spotifyUrl && (
+                    <a
+                      href={revealedAnswer.song.spotifyUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-block mt-4 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-full font-poppins text-sm transition-colors"
+                    >
+                      Listen on Spotify 🎵
+                    </a>
+                  )}
+                </div>
+              )}
+              
+              <p className="text-purple-300 font-poppins text-xs italic">
+                Choose your next cosmic chamber! ✨
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button 
+              className="mystical-button w-full"
+              onClick={() => setShowAnswerReveal(false)}
+            >
+              Continue Exploring
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

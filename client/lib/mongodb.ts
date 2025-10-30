@@ -26,10 +26,23 @@ async function connectDB(): Promise<typeof mongoose> {
   if (!cached.promise) {
     const opts = {
       bufferCommands: false,
+      // Add connection timeouts to fail fast on network issues
+      serverSelectionTimeoutMS: 5000, // 5s
+      connectTimeoutMS: 5000, // 5s
+      socketTimeoutMS: 45000 // 45s
     }
 
+    console.log('[connectDB] Attempting mongoose.connect with timeout options', {
+      serverSelectionTimeoutMS: opts.serverSelectionTimeoutMS,
+      connectTimeoutMS: opts.connectTimeoutMS
+    })
+
     cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
+      console.log('[connectDB] Mongoose connected')
       return mongoose
+    }).catch((err) => {
+      console.error('[connectDB] Mongoose connect error:', err && err.message ? err.message : err)
+      throw err
     })
   }
 

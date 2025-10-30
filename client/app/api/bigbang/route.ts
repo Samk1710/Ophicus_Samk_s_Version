@@ -29,7 +29,12 @@ export async function POST(request: NextRequest) {
     });
 
     // Connect to DB and check for existing sessions (both active and completed)
-    await connectDB();
+    try {
+      await connectDB();
+    } catch (dbErr) {
+      console.error('[POST /api/bigbang] Failed to connect to DB:', dbErr && dbErr.message ? dbErr.message : dbErr)
+      return NextResponse.json({ error: 'Database connection failed', details: dbErr instanceof Error ? dbErr.message : String(dbErr) }, { status: 503 })
+    }
     console.log('🗄️  [POST /api/bigbang] Checking for existing sessions...');
     
     const existingSessions = await GameSession.find({
