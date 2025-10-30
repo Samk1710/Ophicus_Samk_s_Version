@@ -1,0 +1,8 @@
+{
+  "buildCommand": "cd client && pnpm install && pnpm run build",
+  "outputDirectory": "client/.next",
+  "devCommand": "cd client && pnpm run dev",
+  "installCommand": "cd client && pnpm install",
+  "framework": "nextjs",
+  "regions": ["iad1"]
+}
