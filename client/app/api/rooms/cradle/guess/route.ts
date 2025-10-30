@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
     }
 
     let rewardClue = '';
-    if (isCorrect) {
+    if (isCorrect || currentAttempts >= 3) {
       console.log('🎁 [POST /api/rooms/cradle/guess] Generating reward clue...');
       rewardClue = await generateArtistReward(gameSession.cosmicSong);
       console.log('✅ [POST /api/rooms/cradle/guess] Reward clue generated');

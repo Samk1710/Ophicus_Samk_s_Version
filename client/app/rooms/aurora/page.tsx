@@ -9,13 +9,14 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import {
   AlertDialog,
+  AlertDialogAction,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Play, Pause, Send, Volume2, Rainbow, Loader2, PartyPopper, XCircle, Sparkles } from "lucide-react"
+import { Play, Pause, Send, Volume2, Rainbow, Loader2, PartyPopper, XCircle, Sparkles, AlertTriangle } from "lucide-react"
 import { useGameState } from "@/components/providers/game-state-provider"
 import { SpotifySearch } from "@/components/spotify-search"
 import { useRouter } from "next/navigation"
@@ -28,6 +29,8 @@ export default function AuroraRoom() {
   const [selectedTrack, setSelectedTrack] = useState<{id: string; name: string} | null>(null)
   const [showSuccessDialog, setShowSuccessDialog] = useState(false)
   const [showFailureDialog, setShowFailureDialog] = useState(false)
+  const [showServerErrorDialog, setShowServerErrorDialog] = useState(false)
+  const [showReentryDialog, setShowReentryDialog] = useState(false)
   const [moodScore, setMoodScore] = useState<number | null>(null)
   const [pointsEarned, setPointsEarned] = useState(0)
   const [audioUrl, setAudioUrl] = useState("")
@@ -36,7 +39,7 @@ export default function AuroraRoom() {
   const [clueText, setClueText] = useState("")
   const [feedbackText, setFeedbackText] = useState("")
   const audioRef = useRef<HTMLAudioElement>(null)
-  const { sessionId, gameSession, refreshGameState } = useGameState()
+  const { sessionId, gameSession, refreshGameState, auroraRoomEnter, setRoomEnter } = useGameState()
   const router = useRouter()
   const hasFetchedRef = useRef(false)
 
@@ -82,14 +85,14 @@ export default function AuroraRoom() {
 
     // Check if room is already completed
     if (gameSession?.roomClues?.aurora?.completed) {
-      console.log('[Aurora] Room already completed')
-      toast.error("Aurora Chamber Already Explored", {
-        description: "This cosmic chamber has already revealed its secrets.",
-        duration: 3000,
-        className: "glassmorphism border-purple-400/50"
-      })
-      router.push('/astral-nexus')
+      console.log('[Aurora] Room already completed, showing reentry dialog')
+      setShowReentryDialog(true)
       return
+    }
+
+    // Mark room as entered
+    if (!auroraRoomEnter) {
+      setRoomEnter('aurora', true)
     }
 
     // Prevent duplicate API calls
@@ -100,7 +103,7 @@ export default function AuroraRoom() {
     
     hasFetchedRef.current = true
     fetchAudio()
-  }, [sessionId]) // Only depend on sessionId
+  }, [sessionId, gameSession]) // Depend on sessionId and gameSession
 
   const fetchAudio = async () => {
     console.log('[Aurora] Fetching audio vignette...')
@@ -108,25 +111,28 @@ export default function AuroraRoom() {
     
     try {
       const response = await fetch(`/api/rooms/aurora?sessionId=${sessionId}`)
+      
+      // Handle server errors (500+)
+      if (response.status >= 500) {
+        console.error('[Aurora] Server error:', response.status)
+        setShowServerErrorDialog(true)
+        setRoomEnter('aurora', false) // Reverse room entry state
+        return
+      }
+      
       const data = await response.json()
       console.log('[Aurora] Audio data:', data)
       
       if (data.completed) {
-        console.log('[Aurora] Room already completed, redirecting')
-        toast.error("Aurora Chamber Already Explored", {
-          description: "This cosmic chamber has already revealed its secrets.",
-          duration: 3000
-        })
-        router.push('/astral-nexus')
+        console.log('[Aurora] Room already completed, showing reentry dialog')
+        setShowReentryDialog(true)
       } else {
         setAudioUrl(data.audioUrl || '')
       }
     } catch (error) {
       console.error('[Aurora] Failed to fetch:', error)
-      toast.error("Failed to load cosmic audio", {
-        description: "Please try again.",
-        duration: 3000
-      })
+      setShowServerErrorDialog(true)
+      setRoomEnter('aurora', false) // Reverse room entry state
     } finally {
       setIsLoading(false)
     }
@@ -163,6 +169,14 @@ export default function AuroraRoom() {
         })
       })
 
+      // Handle server errors (500+)
+      if (response.status >= 500) {
+        console.error('[Aurora] Server error on submit:', response.status)
+        setShowServerErrorDialog(true)
+        setRoomEnter('aurora', false) // Reverse room entry state
+        return
+      }
+
       const data = await response.json()
       console.log('[Aurora] Result:', data)
 
@@ -181,10 +195,8 @@ export default function AuroraRoom() {
       await refreshGameState()
     } catch (error) {
       console.error('[Aurora] Submit failed:', error)
-      toast.error("Submission failed", {
-        description: "Please try again.",
-        duration: 3000
-      })
+      setShowServerErrorDialog(true)
+      setRoomEnter('aurora', false) // Reverse room entry state
     } finally {
       setIsSubmitting(false)
     }
@@ -394,9 +406,9 @@ export default function AuroraRoom() {
                     className="w-16 h-16 rounded-full bg-gradient-to-r from-green-500/30 to-teal-600/30 border border-green-400/50 hover:from-green-500/40 hover:to-teal-600/40 transition-all duration-300"
                   >
                     {isPlaying ? (
-                      <Pause className="w-6 h-6 text-green-300" />
+                      <Pause className="w-6 h-6 text-green-900" />
                     ) : (
-                      <Play className="w-6 h-6 text-green-300 ml-1" />
+                      <Play className="w-6 h-6 text-green-900 ml-1" />
                     )}
                   </Button>
                   <Volume2 className="w-5 h-5 text-green-300" />
@@ -489,6 +501,70 @@ export default function AuroraRoom() {
           </div>
         </div>
       </div>
+
+      {/* Server Error Dialog */}
+      <AlertDialog open={showServerErrorDialog} onOpenChange={setShowServerErrorDialog}>
+        <AlertDialogContent className="glassmorphism border-red-400/50 max-w-md">
+          <AlertDialogHeader>
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-red-500/30 to-orange-600/30 flex items-center justify-center">
+                <AlertTriangle className="w-10 h-10 text-red-400" />
+              </div>
+            </div>
+            <AlertDialogTitle className="font-cinzel text-2xl font-bold text-center text-red-100">
+              Server Down
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center space-y-3">
+              <p className="font-poppins text-red-200">
+                The cosmic servers are experiencing turbulence. Please try again later.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              onClick={() => {
+                setShowServerErrorDialog(false)
+                router.push('/astral-nexus')
+              }}
+              className="mystical-button w-full"
+            >
+              Return to Nexus
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reentry Prevention Dialog */}
+      <AlertDialog open={showReentryDialog} onOpenChange={setShowReentryDialog}>
+        <AlertDialogContent className="glassmorphism border-yellow-400/50 max-w-md">
+          <AlertDialogHeader>
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-yellow-500/30 to-amber-600/30 flex items-center justify-center">
+                <Sparkles className="w-10 h-10 text-yellow-400" />
+              </div>
+            </div>
+            <AlertDialogTitle className="font-cinzel text-2xl font-bold text-center text-yellow-100">
+              Chamber Already Explored
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center space-y-3">
+              <p className="font-poppins text-yellow-200">
+                You can't enter this room again. The cosmic secrets have already been revealed.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              onClick={() => {
+                setShowReentryDialog(false)
+                router.push('/astral-nexus')
+              }}
+              className="mystical-button w-full"
+            >
+              Return to Nexus
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

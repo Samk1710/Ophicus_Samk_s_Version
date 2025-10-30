@@ -29,6 +29,12 @@ export function AstronomyMap() {
       color: "green",
       label: "Emotional Resonance",
     },
+    cradle: {
+      name: "Cradle",
+      emoji: "🌍",
+      color: "blue",
+      label: "Cosmic Discovery",
+    },
   }
 
   // Get all completed clues (not skipped)
@@ -41,10 +47,10 @@ export function AstronomyMap() {
 
   return (
     <>
-      {/* Floating Button */}
+      {/* Floating Button - Positioned at bottom-left like LunarChatbot was */}
       <motion.button
         onClick={() => setIsOpen(true)}
-        className={`fixed bottom-24 right-6 z-40 w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 ${
+        className={`fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 ${
           hasClues
             ? 'bg-gradient-to-br from-purple-600 to-gold-600 hover:from-purple-500 hover:to-gold-500'
             : 'bg-gradient-to-br from-zinc-700 to-zinc-800 hover:from-zinc-600 hover:to-zinc-700 opacity-50'
@@ -56,7 +62,7 @@ export function AstronomyMap() {
         <Map className="w-6 h-6 text-white" />
         {hasClues && (
           <motion.div
-            className="absolute -top-1 -right-1 w-5 h-5 bg-gold-400 rounded-full flex items-center justify-center text-xs font-bold text-black"
+            className="absolute -top-1 -left-1 w-5 h-5 bg-gold-400 rounded-full flex items-center justify-center text-xs font-bold text-black"
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
           >
@@ -89,7 +95,7 @@ export function AstronomyMap() {
               </button>
 
               {/* Content */}
-              <div className="bg-gradient-to-br from-zinc-900 via-purple-900/20 to-zinc-900 border-2 border-gold-400/30 rounded-3xl p-8 overflow-y-auto max-h-[90vh]">
+              <div className="bg-gradient-to-br from-zinc-900 via-purple-900/20 to-zinc-900 border-2 border-gold-400/30 rounded-3xl p-8 overflow-y-auto max-h-[90vh] custom-scrollbar">
                 {/* Header */}
                 <div className="text-center mb-8">
                   <div className="flex items-center justify-center gap-3 mb-2">
@@ -121,32 +127,38 @@ export function AstronomyMap() {
                       const bgGradient = 
                         room === 'nebula' ? 'from-purple-900/20 to-black/40' :
                         room === 'comet' ? 'from-orange-900/20 to-black/40' :
-                        'from-green-900/20 to-black/40'
+                        room === 'aurora' ? 'from-green-900/20 to-black/40' :
+                        'from-blue-900/20 to-black/40'
                       
                       const borderColor = 
                         room === 'nebula' ? 'border-purple-400/30 hover:border-purple-400/50' :
                         room === 'comet' ? 'border-orange-400/30 hover:border-orange-400/50' :
-                        'border-green-400/30 hover:border-green-400/50'
+                        room === 'aurora' ? 'border-green-400/30 hover:border-green-400/50' :
+                        'border-blue-400/30 hover:border-blue-400/50'
                       
                       const iconBg = 
                         room === 'nebula' ? 'to-purple-900/30' :
                         room === 'comet' ? 'to-orange-900/30' :
-                        'to-green-900/30'
+                        room === 'aurora' ? 'to-green-900/30' :
+                        'to-blue-900/30'
                       
                       const iconBorder = 
                         room === 'nebula' ? 'border-purple-400/30' :
                         room === 'comet' ? 'border-orange-400/30' :
-                        'border-green-400/30'
+                        room === 'aurora' ? 'border-green-400/30' :
+                        'border-blue-400/30'
                       
                       const titleColor = 
                         room === 'nebula' ? 'text-purple-100' :
                         room === 'comet' ? 'text-orange-100' :
-                        'text-green-100'
+                        room === 'aurora' ? 'text-green-100' :
+                        'text-blue-100'
                       
                       const labelColor = 
                         room === 'nebula' ? 'text-purple-300' :
                         room === 'comet' ? 'text-orange-300' :
-                        'text-green-300'
+                        room === 'aurora' ? 'text-green-300' :
+                        'text-blue-300'
 
                       return (
                         <motion.div

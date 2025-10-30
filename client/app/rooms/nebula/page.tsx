@@ -7,7 +7,7 @@ import { ProgressTracker } from "@/components/progress-tracker"
 import { CelestialIcon } from "@/components/celestial-icon"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Send, Circle, Loader2, Sparkles, X } from "lucide-react"
+import { Send, Circle, Loader2, Sparkles, X, AlertTriangle } from "lucide-react"
 import Link from "next/link"
 import { useGameState } from "@/components/providers/game-state-provider"
 import { SpotifySearch } from "@/components/spotify-search"
@@ -27,8 +27,10 @@ export default function NebulaRoom() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showSuccessDialog, setShowSuccessDialog] = useState(false)
   const [showFailureDialog, setShowFailureDialog] = useState(false)
+  const [showServerErrorDialog, setShowServerErrorDialog] = useState(false)
+  const [showReentryDialog, setShowReentryDialog] = useState(false)
   const [earnedPoints, setEarnedPoints] = useState(0)
-  const { sessionId, gameSession, refreshGameState } = useGameState()
+  const { sessionId, gameSession, refreshGameState, nebulaRoomEnter, setRoomEnter } = useGameState()
   const router = useRouter()
   const hasFetchedRef = useRef(false)
 
@@ -44,14 +46,14 @@ export default function NebulaRoom() {
     
     // Check if room is already completed - lock it
     if (gameSession?.roomClues?.nebula?.completed) {
-      console.log('[Nebula] Room already completed, redirecting')
-      toast.error("Nebula Chamber Already Explored", {
-        description: "This cosmic chamber has already revealed its secrets.",
-        duration: 3000,
-        className: "glassmorphism border-purple-400/50"
-      })
-      router.push('/astral-nexus')
+      console.log('[Nebula] Room already completed, showing reentry dialog')
+      setShowReentryDialog(true)
       return
+    }
+    
+    // Mark room as entered
+    if (!nebulaRoomEnter) {
+      setRoomEnter('nebula', true)
     }
     
     // Prevent duplicate API calls
@@ -62,7 +64,7 @@ export default function NebulaRoom() {
     
     hasFetchedRef.current = true
     fetchRiddle()
-  }, [sessionId]) // Only depend on sessionId
+  }, [sessionId, gameSession]) // Depend on sessionId and gameSession
 
   const fetchRiddle = async () => {
     console.log('[Nebula] Fetching riddle...')
@@ -70,6 +72,15 @@ export default function NebulaRoom() {
     
     try {
       const response = await fetch(`/api/rooms/nebula?sessionId=${sessionId}`)
+      
+      // Handle server errors (500+)
+      if (response.status >= 500) {
+        console.error('[Nebula] Server error:', response.status)
+        setShowServerErrorDialog(true)
+        setRoomEnter('nebula', false) // Reverse room entry state
+        return
+      }
+      
       const data = await response.json()
       console.log('[Nebula] Riddle data:', data)
       
@@ -83,6 +94,8 @@ export default function NebulaRoom() {
       }
     } catch (error) {
       console.error('[Nebula] Failed to fetch riddle:', error)
+      setShowServerErrorDialog(true)
+      setRoomEnter('nebula', false) // Reverse room entry state
     } finally {
       setIsLoading(false)
     }
@@ -109,6 +122,14 @@ export default function NebulaRoom() {
         })
       })
 
+      // Handle server errors (500+)
+      if (response.status >= 500) {
+        console.error('[Nebula] Server error on submit:', response.status)
+        setShowServerErrorDialog(true)
+        setRoomEnter('nebula', false) // Reverse room entry state
+        return
+      }
+
       const data = await response.json()
       console.log('[Nebula] Result:', data)
 
@@ -133,7 +154,8 @@ export default function NebulaRoom() {
       }
     } catch (error) {
       console.error('[Nebula] Submit failed:', error)
-      alert('Failed to submit your guess. Please try again.')
+      setShowServerErrorDialog(true)
+      setRoomEnter('nebula', false) // Reverse room entry state
     } finally {
       setIsSubmitting(false)
     }
@@ -254,7 +276,7 @@ export default function NebulaRoom() {
                 {selectedSong && (
                   <div className="bg-purple-900/20 rounded-lg p-3 border border-purple-400/30">
                     <p className="font-poppins text-sm text-purple-200 text-center">
-                      Selected: <span className="font-bold text-gold-200">{selectedSong.name}</span> by {selectedSong.artist}
+                      Selected: <span className="font-bold text-gold-200">{selectedSong.name}</span> {selectedSong.artist}
                     </p>
                   </div>
                 )}
@@ -418,6 +440,70 @@ export default function NebulaRoom() {
               className="mystical-button w-full"
             >
               {attempts > 0 ? 'Try Again' : 'Continue Quest'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Server Error Dialog */}
+      <AlertDialog open={showServerErrorDialog} onOpenChange={setShowServerErrorDialog}>
+        <AlertDialogContent className="glassmorphism border-red-400/50 max-w-md">
+          <AlertDialogHeader>
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-red-500/30 to-orange-600/30 flex items-center justify-center">
+                <AlertTriangle className="w-10 h-10 text-red-400" />
+              </div>
+            </div>
+            <AlertDialogTitle className="font-cinzel text-2xl font-bold text-center text-red-100">
+              Server Down
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center space-y-3">
+              <p className="font-poppins text-red-200">
+                The cosmic servers are experiencing turbulence. Please try again later.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              onClick={() => {
+                setShowServerErrorDialog(false)
+                router.push('/astral-nexus')
+              }}
+              className="mystical-button w-full"
+            >
+              Return to Nexus
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reentry Prevention Dialog */}
+      <AlertDialog open={showReentryDialog} onOpenChange={setShowReentryDialog}>
+        <AlertDialogContent className="glassmorphism border-yellow-400/50 max-w-md">
+          <AlertDialogHeader>
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-yellow-500/30 to-amber-600/30 flex items-center justify-center">
+                <Sparkles className="w-10 h-10 text-yellow-400" />
+              </div>
+            </div>
+            <AlertDialogTitle className="font-cinzel text-2xl font-bold text-center text-yellow-100">
+              Chamber Already Explored
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center space-y-3">
+              <p className="font-poppins text-yellow-200">
+                You can't enter this room again. The cosmic secrets have already been revealed.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              onClick={() => {
+                setShowReentryDialog(false)
+                router.push('/astral-nexus')
+              }}
+              className="mystical-button w-full"
+            >
+              Return to Nexus
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

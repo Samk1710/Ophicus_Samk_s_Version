@@ -9,10 +9,15 @@ interface GameState {
   gameSession: Partial<IGameSession> | null;
   loading: boolean;
   error: string | null;
+  nebulaRoomEnter: boolean;
+  cometRoomEnter: boolean;
+  cradleRoomEnter: boolean;
+  auroraRoomEnter: boolean;
   initializeBigBang: () => Promise<void>;
   refreshGameState: () => Promise<void>;
   updateRoomProgress: (roomName: string) => void;
   setSessionId: (sessionId: string | null) => void;
+  setRoomEnter: (room: 'nebula' | 'comet' | 'cradle' | 'aurora', entered: boolean) => void;
 }
 
 export const useGameState = create<GameState>((set: (partial: Partial<GameState>) => void, get: () => GameState) => ({
@@ -20,6 +25,10 @@ export const useGameState = create<GameState>((set: (partial: Partial<GameState>
   gameSession: null,
   loading: false,
   error: null,
+  nebulaRoomEnter: false,
+  cometRoomEnter: false,
+  cradleRoomEnter: false,
+  auroraRoomEnter: false,
 
   setSessionId: (sessionId: string | null) => {
     set({ sessionId });
@@ -28,6 +37,11 @@ export const useGameState = create<GameState>((set: (partial: Partial<GameState>
     } else {
       localStorage.removeItem('gameSessionId');
     }
+  },
+
+  setRoomEnter: (room: 'nebula' | 'comet' | 'cradle' | 'aurora', entered: boolean) => {
+    const key = `${room}RoomEnter` as keyof GameState;
+    set({ [key]: entered });
   },
 
   initializeBigBang: async () => {

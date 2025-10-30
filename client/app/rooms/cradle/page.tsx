@@ -9,7 +9,7 @@ import { CosmicConfetti, celebrateCorrectAnswer } from "@/components/cosmic-conf
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Send, MessageCircle, Globe, Loader2, CheckCircle, XCircle } from "lucide-react"
+import { Send, MessageCircle, Globe, Loader2, CheckCircle, XCircle, AlertTriangle, Sparkles } from "lucide-react"
 import { useGameState } from "@/components/providers/game-state-provider"
 import { SpotifySearch } from "@/components/spotify-search"
 import { useRouter } from "next/navigation"
@@ -18,6 +18,8 @@ import {
   AlertDialog,
   AlertDialogContent,
   AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogAction,
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
@@ -41,10 +43,13 @@ export default function CradleRoom() {
   const [attemptsRemaining, setAttemptsRemaining] = useState(3)
   const [isCompleted, setIsCompleted] = useState(false)
   const [clueText, setClueText] = useState("")
+  const [artistClue, setArtistClue] = useState("")
   const [showSuccessDialog, setShowSuccessDialog] = useState(false)
   const [showFailureDialog, setShowFailureDialog] = useState(false)
+  const [showServerErrorDialog, setShowServerErrorDialog] = useState(false)
+  const [showReentryDialog, setShowReentryDialog] = useState(false)
   const [earnedPoints, setEarnedPoints] = useState(0)
-  const { sessionId, gameSession, refreshGameState } = useGameState()
+  const { sessionId, gameSession, refreshGameState, cradleRoomEnter, setRoomEnter } = useGameState()
   const router = useRouter()
   const hasFetchedRef = useRef(false)
 
@@ -59,14 +64,14 @@ export default function CradleRoom() {
     
     // Check if room is already completed - lock it
     if (gameSession?.roomClues?.cradle?.completed) {
-      console.log('[Cradle] Room already completed, redirecting')
-      toast.error("Cradle Chamber Already Explored", {
-        description: "This cosmic chamber has already revealed its secrets.",
-        duration: 3000,
-        className: "glassmorphism border-blue-400/50"
-      })
-      router.push('/astral-nexus')
+      console.log('[Cradle] Room already completed, showing reentry dialog')
+      setShowReentryDialog(true)
       return
+    }
+    
+    // Mark room as entered
+    if (!cradleRoomEnter) {
+      setRoomEnter('cradle', true)
     }
     
     // Prevent duplicate API calls
@@ -77,7 +82,7 @@ export default function CradleRoom() {
     
     hasFetchedRef.current = true
     fetchInitialClue()
-  }, [sessionId]) // Only depend on sessionId
+  }, [sessionId, gameSession]) // Depend on sessionId and gameSession
 
   const fetchInitialClue = async () => {
     console.log('[Cradle] Fetching initial artist clue...')
@@ -85,8 +90,22 @@ export default function CradleRoom() {
     
     try {
       const response = await fetch(`/api/rooms/cradle?sessionId=${sessionId}`)
+      
+      // Handle server errors (500+)
+      if (response.status >= 500) {
+        console.error('[Cradle] Server error:', response.status)
+        setShowServerErrorDialog(true)
+        setRoomEnter('cradle', false) // Reverse room entry state
+        return
+      }
+      
       const data = await response.json()
       console.log('[Cradle] Initial data:', data)
+      
+      // Store the artist clue for the hint card
+      if (data.artistClue) {
+        setArtistClue(data.artistClue)
+      }
       
       if (data.completed) {
         setIsCompleted(true)
@@ -108,12 +127,8 @@ export default function CradleRoom() {
       }
     } catch (error) {
       console.error('[Cradle] Failed to fetch:', error)
-      setMessages([{
-        id: 1,
-        type: "system",
-        content: "The cosmic oracle is silent... Try again.",
-        timestamp: new Date()
-      }])
+      setShowServerErrorDialog(true)
+      setRoomEnter('cradle', false) // Reverse room entry state
     } finally {
       setIsLoading(false)
     }
@@ -148,6 +163,14 @@ export default function CradleRoom() {
         })
       })
 
+      // Handle server errors (500+)
+      if (response.status >= 500) {
+        console.error('[Cradle] Server error on ask:', response.status)
+        setShowServerErrorDialog(true)
+        setRoomEnter('cradle', false) // Reverse room entry state
+        return
+      }
+
       const data = await response.json()
       console.log('[Cradle] Answer received:', data)
 
@@ -164,6 +187,8 @@ export default function CradleRoom() {
       // No automatic showing of guess form - it's always visible
     } catch (error) {
       console.error('[Cradle] Failed to get answer:', error)
+      setShowServerErrorDialog(true)
+      setRoomEnter('cradle', false) // Reverse room entry state
     } finally {
       setIsSending(false)
     }
@@ -187,6 +212,14 @@ export default function CradleRoom() {
           guessedArtistId: selectedArtist.id
         })
       })
+
+      // Handle server errors (500+)
+      if (response.status >= 500) {
+        console.error('[Cradle] Server error on guess:', response.status)
+        setShowServerErrorDialog(true)
+        setRoomEnter('cradle', false) // Reverse room entry state
+        return
+      }
 
       const data = await response.json()
       console.log('[Cradle] Guess result:', data)
@@ -225,7 +258,8 @@ export default function CradleRoom() {
       }
     } catch (error) {
       console.error('[Cradle] Guess failed:', error)
-      alert('Failed to submit guess. Please try again.')
+      setShowServerErrorDialog(true)
+      setRoomEnter('cradle', false) // Reverse room entry state
     } finally {
       setIsSubmitting(false)
     }
@@ -342,7 +376,7 @@ export default function CradleRoom() {
 
           {/* Artist Guess Panel */}
           <div className="space-y-6">
-            <Card className="glassmorphism border-green-400/50 p-6">
+            <Card className="glassmorphism border-green-400/50 p-6 relative z-10">
               <div className="text-center mb-4">
                 <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-gradient-to-br from-green-500/30 to-teal-600/30 flex items-center justify-center">
                   <MessageCircle className="w-6 h-6 text-green-300" />
@@ -404,13 +438,13 @@ export default function CradleRoom() {
             </Card>
 
             {/* Hint Card */}
-            <Card className="glassmorphism border-yellow-400/50 p-6">
+            <Card className="glassmorphism border-yellow-400/50 p-6 relative z-0">
               <div className="flex items-center mb-3">
                 <CelestialIcon type="sun" className="text-yellow-400 mr-2" />
                 <h4 className="font-cormorant text-lg font-bold text-yellow-100">Cosmic Hint</h4>
               </div>
-              <p className="font-poppins text-sm text-yellow-200">
-                The artist you seek has a voice that transcends time. Use your questions wisely to uncover their identity.
+              <p className="font-poppins text-sm text-yellow-200 whitespace-pre-wrap">
+                {artistClue || "The artist you seek has a voice that transcends time. Use your questions wisely to uncover their identity."}
               </p>
             </Card>
           </div>
@@ -513,6 +547,70 @@ export default function CradleRoom() {
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Server Error Dialog */}
+      <AlertDialog open={showServerErrorDialog} onOpenChange={setShowServerErrorDialog}>
+        <AlertDialogContent className="glassmorphism border-red-400/50 max-w-md">
+          <AlertDialogHeader>
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-red-500/30 to-orange-600/30 flex items-center justify-center">
+                <AlertTriangle className="w-10 h-10 text-red-400" />
+              </div>
+            </div>
+            <AlertDialogTitle className="font-cinzel text-2xl font-bold text-center text-red-100">
+              Server Down
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center space-y-3">
+              <p className="font-poppins text-red-200">
+                The cosmic servers are experiencing turbulence. Please try again later.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              onClick={() => {
+                setShowServerErrorDialog(false)
+                router.push('/astral-nexus')
+              }}
+              className="mystical-button w-full"
+            >
+              Return to Nexus
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reentry Prevention Dialog */}
+      <AlertDialog open={showReentryDialog} onOpenChange={setShowReentryDialog}>
+        <AlertDialogContent className="glassmorphism border-yellow-400/50 max-w-md">
+          <AlertDialogHeader>
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-yellow-500/30 to-amber-600/30 flex items-center justify-center">
+                <Sparkles className="w-10 h-10 text-yellow-400" />
+              </div>
+            </div>
+            <AlertDialogTitle className="font-cinzel text-2xl font-bold text-center text-yellow-100">
+              Chamber Already Explored
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center space-y-3">
+              <p className="font-poppins text-yellow-200">
+                You can't enter this room again. The cosmic secrets have already been revealed.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              onClick={() => {
+                setShowReentryDialog(false)
+                router.push('/astral-nexus')
+              }}
+              className="mystical-button w-full"
+            >
+              Return to Nexus
+            </AlertDialogAction>
+          </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </div>

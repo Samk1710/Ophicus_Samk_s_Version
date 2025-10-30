@@ -109,7 +109,7 @@ export function QuestSummary({ isOpen, onClose, questData }: QuestSummaryProps) 
           </AlertDialogDescription>
         </AlertDialogHeader>
 
-        <div className="space-y-4 sm:space-y-6 overflow-y-auto flex-1 pr-2">
+        <div className="space-y-4 sm:space-y-6 overflow-y-auto flex-1 pr-2 custom-scrollbar">
           {/* Cosmic Song Section */}
           <Card className="glassmorphism border-purple-400/30 p-4 sm:p-6">
             <div className="flex items-center gap-2 mb-3 sm:mb-4">

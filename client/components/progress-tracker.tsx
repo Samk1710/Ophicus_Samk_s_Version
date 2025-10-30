@@ -168,17 +168,6 @@ export function ProgressTracker({ completedRooms, failedRooms = [], currentRoom 
           </details>
         )}
 
-        {/* Room Answers Section */}
-        {gameSession && (
-          <details className="mb-3">
-            <summary className="font-poppins text-xs text-gold-400 cursor-pointer hover:text-gold-300 transition-colors">
-              Room Answers
-            </summary>
-            <div className="space-y-2 mt-2 pl-2">
-            </div>
-          </details>
-        )}
-
         {/* Revelation Link */}
         {allRoomsCompleted ? (
           <Link href="/final-guess">

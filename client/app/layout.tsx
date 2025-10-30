@@ -3,7 +3,6 @@ import type { Metadata } from "next"
 import { Inter, Poppins, Cormorant_Garamond, Cinzel_Decorative } from "next/font/google"
 import "./globals.css"
 import { Navbar } from "@/components/navbar"
-import { LunarChatbot } from "@/components/lunar-chatbot"
 import { AstronomyMap } from "@/components/astronomy-map"
 import SessionProvider from "@/components/providers/session-provider"
 import { GameStateProvider } from "@/components/providers/game-state-provider"
@@ -65,7 +64,6 @@ export default function RootLayout({
             <div className="min-h-screen bg-gray-950 text-gray-100 font-inter">
               <Navbar />
               <main className="pt-16">{children}</main>
-              <LunarChatbot />
               <AstronomyMap />
             </div>
             <Toaster 

@@ -7,7 +7,7 @@ import { ProgressTracker } from "@/components/progress-tracker"
 import { CelestialIcon } from "@/components/celestial-icon"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Send, Zap, Flame, Loader2, CheckCircle, XCircle } from "lucide-react"
+import { Send, Zap, Flame, Loader2, CheckCircle, XCircle, AlertTriangle, Sparkles } from "lucide-react"
 import { useGameState } from "@/components/providers/game-state-provider"
 import { SpotifySearch } from "@/components/spotify-search"
 import { useRouter } from "next/navigation"
@@ -17,6 +17,8 @@ import {
   AlertDialog,
   AlertDialogContent,
   AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogAction,
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
@@ -30,13 +32,16 @@ export default function CometRoom() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isCompleted, setIsCompleted] = useState(false)
+  const [answerSubmitted, setAnswerSubmitted] = useState(false)
   const [lyric, setLyric] = useState("")
   const [clueText, setClueText] = useState("")
   const [showSuccessDialog, setShowSuccessDialog] = useState(false)
   const [showFailureDialog, setShowFailureDialog] = useState(false)
+  const [showServerErrorDialog, setShowServerErrorDialog] = useState(false)
+  const [showReentryDialog, setShowReentryDialog] = useState(false)
   const [earnedPoints, setEarnedPoints] = useState(0)
   const [revealedSong, setRevealedSong] = useState<any>(null)
-  const { sessionId, gameSession, refreshGameState } = useGameState()
+  const { sessionId, gameSession, refreshGameState, cometRoomEnter, setRoomEnter } = useGameState()
   const router = useRouter()
   const hasFetchedRef = useRef(false)
 
@@ -50,14 +55,14 @@ export default function CometRoom() {
     
     // Check if room is already completed - lock it
     if (gameSession?.roomClues?.comet?.completed) {
-      console.log('[Comet] Room already completed, redirecting')
-      toast.error("Comet Chamber Already Explored", {
-        description: "This cosmic chamber has already revealed its secrets.",
-        duration: 3000,
-        className: "glassmorphism border-orange-400/50"
-      })
-      router.push('/astral-nexus')
+      console.log('[Comet] Room already completed, showing reentry dialog')
+      setShowReentryDialog(true)
       return
+    }
+    
+    // Mark room as entered
+    if (!cometRoomEnter) {
+      setRoomEnter('comet', true)
     }
     
     // Prevent duplicate API calls
@@ -68,7 +73,7 @@ export default function CometRoom() {
     
     hasFetchedRef.current = true
     fetchLyric()
-  }, [sessionId]) // Only depend on sessionId
+  }, [sessionId, gameSession]) // Depend on sessionId and gameSession
 
   const fetchLyric = async () => {
     console.log('[Comet] Fetching lyric fragment...')
@@ -76,6 +81,15 @@ export default function CometRoom() {
     
     try {
       const response = await fetch(`/api/rooms/comet?sessionId=${sessionId}`)
+      
+      // Handle server errors (500+)
+      if (response.status >= 500) {
+        console.error('[Comet] Server error:', response.status)
+        setShowServerErrorDialog(true)
+        setRoomEnter('comet', false) // Reverse room entry state
+        return
+      }
+      
       const data = await response.json()
       console.log('[Comet] Lyric data:', data)
       
@@ -94,19 +108,21 @@ export default function CometRoom() {
       }
     } catch (error) {
       console.error('[Comet] Failed to fetch:', error)
-      setLyric("Error loading lyric...")
+      setShowServerErrorDialog(true)
+      setRoomEnter('comet', false) // Reverse room entry state
     } finally {
       setIsLoading(false)
     }
   }
 
   useEffect(() => {
-    if (showLyric && timeLeft > 0 && !isCompleted) {
+    // Stop timer if answer has been submitted
+    if (showLyric && timeLeft > 0 && !isCompleted && !answerSubmitted) {
       const timer = setTimeout(() => {
         setTimeLeft(timeLeft - 1)
       }, 1000)
       return () => clearTimeout(timer)
-    } else if (timeLeft === 0 && showLyric && !isCompleted) {
+    } else if (timeLeft === 0 && showLyric && !isCompleted && !answerSubmitted) {
       // Time expired with no answer - end room with 0 points
       console.log('[Comet] Time expired with no answer - room failed')
       setIsCompleted(true)
@@ -123,14 +139,30 @@ export default function CometRoom() {
           timeout: true
         })
       })
-      .then(res => res.json())
+      .then(res => {
+        // Handle server errors (500+)
+        if (res.status >= 500) {
+          console.error('[Comet] Server error on timeout:', res.status)
+          setShowServerErrorDialog(true)
+          setRoomEnter('comet', false) // Reverse room entry state
+          return null
+        }
+        return res.json()
+      })
       .then(data => {
-        setRevealedSong(data.revealedSong || null)
-        setShowFailureDialog(true)
-        refreshGameState()
+        if (data) {
+          setRevealedSong(data.revealedSong || null)
+          setShowFailureDialog(true)
+          refreshGameState()
+        }
+      })
+      .catch(error => {
+        console.error('[Comet] Timeout submit error:', error)
+        setShowServerErrorDialog(true)
+        setRoomEnter('comet', false)
       })
     }
-  }, [timeLeft, showLyric, isCompleted, sessionId, refreshGameState])
+  }, [timeLeft, showLyric, isCompleted, answerSubmitted, sessionId, refreshGameState])
 
   const handleGuess = async () => {
     if (!selectedTrack || isSubmitting) {
@@ -139,6 +171,7 @@ export default function CometRoom() {
     }
 
     setIsSubmitting(true)
+    setAnswerSubmitted(true) // Stop the timer
     console.log('[Comet] Submitting track guess:', selectedTrack)
 
     try {
@@ -150,6 +183,15 @@ export default function CometRoom() {
           guessedTrackId: selectedTrack.id
         })
       })
+
+      // Handle server errors (500+)
+      if (response.status >= 500) {
+        console.error('[Comet] Server error on submit:', response.status)
+        setShowServerErrorDialog(true)
+        setRoomEnter('comet', false) // Reverse room entry state
+        setAnswerSubmitted(false) // Allow timer to restart if user returns
+        return
+      }
 
       const data = await response.json()
       console.log('[Comet] Guess result:', data)
@@ -174,7 +216,9 @@ export default function CometRoom() {
       }
     } catch (error) {
       console.error('[Comet] Guess failed:', error)
-      alert('Failed to submit guess. Please try again.')
+      setShowServerErrorDialog(true)
+      setRoomEnter('comet', false) // Reverse room entry state
+      setAnswerSubmitted(false) // Allow timer to restart if user returns
     } finally {
       setIsSubmitting(false)
     }
@@ -438,6 +482,70 @@ export default function CometRoom() {
               </Button>
             </AlertDialogDescription>
           </AlertDialogHeader>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Server Error Dialog */}
+      <AlertDialog open={showServerErrorDialog} onOpenChange={setShowServerErrorDialog}>
+        <AlertDialogContent className="glassmorphism border-red-400/50 max-w-md">
+          <AlertDialogHeader>
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-red-500/30 to-orange-600/30 flex items-center justify-center">
+                <AlertTriangle className="w-10 h-10 text-red-400" />
+              </div>
+            </div>
+            <AlertDialogTitle className="font-cinzel text-2xl font-bold text-center text-red-100">
+              Server Down
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center space-y-3">
+              <p className="font-poppins text-red-200">
+                The cosmic servers are experiencing turbulence. Please try again later.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              onClick={() => {
+                setShowServerErrorDialog(false)
+                router.push('/astral-nexus')
+              }}
+              className="mystical-button w-full"
+            >
+              Return to Nexus
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reentry Prevention Dialog */}
+      <AlertDialog open={showReentryDialog} onOpenChange={setShowReentryDialog}>
+        <AlertDialogContent className="glassmorphism border-yellow-400/50 max-w-md">
+          <AlertDialogHeader>
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-yellow-500/30 to-amber-600/30 flex items-center justify-center">
+                <Sparkles className="w-10 h-10 text-yellow-400" />
+              </div>
+            </div>
+            <AlertDialogTitle className="font-cinzel text-2xl font-bold text-center text-yellow-100">
+              Chamber Already Explored
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center space-y-3">
+              <p className="font-poppins text-yellow-200">
+                You can't enter this room again. The cosmic secrets have already been revealed.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              onClick={() => {
+                setShowReentryDialog(false)
+                router.push('/astral-nexus')
+              }}
+              className="mystical-button w-full"
+            >
+              Return to Nexus
+            </AlertDialogAction>
+          </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </div>

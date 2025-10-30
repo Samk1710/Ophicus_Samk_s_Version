@@ -188,7 +188,7 @@ export default function FinalGuessPage() {
               </AlertDialogTitle>
               <AlertDialogDescription className="text-center space-y-3">
                 <p className="font-poppins text-purple-200">
-                  Your guess: <span className="font-bold text-purple-100">"{selectedSong?.name}"</span> by {selectedSong?.artist}
+                  Your guess: <span className="font-bold text-purple-100">"{selectedSong?.name}"</span> {selectedSong?.artist}
                 </p>
                 <p className="font-poppins text-purple-300">
                   You have <span className="font-bold text-yellow-300">{attemptsRemaining}</span> {attemptsRemaining === 1 ? 'attempt' : 'attempts'} remaining.
@@ -249,40 +249,11 @@ export default function FinalGuessPage() {
                   <CelestialIcon type="mystical" size="xl" className="text-purple-300" />
                 </div>
                 <h2 className="font-cinzel text-3xl font-bold glow-text mb-4 text-gold-100">The Moment of Truth</h2>
-                <p className="font-poppins text-purple-200 mb-6">
-                  You have journeyed through the five cosmic chambers and gathered the celestial clues. The stars have
+                <p className="font-poppins text-purple-200 mb-6">The stars have
                   aligned, and the universe awaits your final answer.
                 </p>
               </div>
 
-              {/* Clue Summary */}
-              <div className="bg-black/20 rounded-lg p-6 mb-8 border border-purple-400/30">
-                <h3 className="font-cormorant text-xl font-bold text-purple-100 mb-4 text-center">
-                  Cosmic Clues Gathered
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  <div className="flex items-center gap-2">
-                    <CelestialIcon type="mystical" size="sm" className="text-purple-300" />
-                    <span className="text-purple-200">Nebula's riddle solved</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CelestialIcon type="planet" size="sm" className="text-blue-300" />
-                    <span className="text-purple-200">Artist's origin revealed</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CelestialIcon type="constellation" size="sm" className="text-orange-300" />
-                    <span className="text-purple-200">Lyric fragment captured</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CelestialIcon type="sun" size="sm" className="text-green-300" />
-                    <span className="text-purple-200">Emotional resonance felt</span>
-                  </div>
-                  <div className="flex items-center gap-2 md:col-span-2 justify-center">
-                    <CelestialIcon type="eye" size="sm" className="text-yellow-300" />
-                    <span className="text-purple-200">Musical memories aligned</span>
-                  </div>
-                </div>
-              </div>
 
               {/* Final Question */}
               <form onSubmit={handleSubmit} className="space-y-6">
@@ -309,7 +280,7 @@ export default function FinalGuessPage() {
                 {selectedSong && (
                   <div className="bg-purple-900/20 rounded-lg p-4 border border-purple-400/30">
                     <p className="font-poppins text-sm text-purple-200 text-center">
-                      Selected: <span className="font-bold text-gold-200">{selectedSong.name}</span> by {selectedSong.artist}
+                      Selected: <span className="font-bold text-gold-200">{selectedSong.name}</span> {selectedSong.artist}
                     </p>
                   </div>
                 )}
