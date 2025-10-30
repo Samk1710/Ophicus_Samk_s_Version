@@ -4,6 +4,7 @@ import { Inter, Poppins, Cormorant_Garamond, Cinzel_Decorative } from "next/font
 import "./globals.css"
 import { Navbar } from "@/components/navbar"
 import { LunarChatbot } from "@/components/lunar-chatbot"
+import { AstronomyMap } from "@/components/astronomy-map"
 import SessionProvider from "@/components/providers/session-provider"
 import { GameStateProvider } from "@/components/providers/game-state-provider"
 import { Toaster } from "sonner"
@@ -65,6 +66,7 @@ export default function RootLayout({
               <Navbar />
               <main className="pt-16">{children}</main>
               <LunarChatbot />
+              <AstronomyMap />
             </div>
             <Toaster 
               position="top-center"

@@ -39,17 +39,15 @@ export function ProgressTracker({ completedRooms, failedRooms = [], currentRoom 
   const router = useRouter()
   const [showSkipDialog, setShowSkipDialog] = useState(false)
   const [isSkipping, setIsSkipping] = useState(false)
-  const [showAnswerDialog, setShowAnswerDialog] = useState(false)
-  const [selectedAnswer, setSelectedAnswer] = useState<{ room: string; song: any; emoji: string; color: string } | null>(null)
+  const [showClueDialog, setShowClueDialog] = useState(false)
+  const [selectedClue, setSelectedClue] = useState<{ room: string; clue: any } | null>(null)
   
   const totalPoints = gameSession?.totalPoints || 0
   const allRoomsCompleted = completedRooms.length === 4
   
-  const handleShowAnswer = (room: string, song: any, emoji: string, color: string) => {
-    console.log('[ProgressTracker] handleShowAnswer called:', { room, song, emoji, color })
-    setSelectedAnswer({ room, song, emoji, color })
-    setShowAnswerDialog(true)
-    console.log('[ProgressTracker] Dialog state set to true')
+  const handleShowClue = (room: string, clue: any) => {
+    setSelectedClue({ room, clue })
+    setShowClueDialog(true)
   }
   
   const handleSkipToRevelation = async () => {
@@ -177,51 +175,6 @@ export function ProgressTracker({ completedRooms, failedRooms = [], currentRoom 
               Room Answers
             </summary>
             <div className="space-y-2 mt-2 pl-2">
-              {/* Nebula Answer */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  if ((completedRooms.includes('nebula') || failedRooms.includes('nebula')) && gameSession.intermediarySongs?.[0]) {
-                    console.log('[ProgressTracker] Showing Nebula answer:', gameSession.intermediarySongs[0])
-                    handleShowAnswer('Nebula', gameSession.intermediarySongs[0], '🔮', 'purple')
-                  }
-                }}
-                disabled={!completedRooms.includes('nebula') && !failedRooms.includes('nebula')}
-                className={`w-full text-left p-2 rounded-lg transition-all duration-200 ${
-                  (completedRooms.includes('nebula') || failedRooms.includes('nebula'))
-                    ? 'bg-purple-900/20 border border-purple-400/30 hover:bg-purple-900/40 hover:border-purple-400/50 cursor-pointer'
-                    : 'bg-gray-900/20 border border-gray-600/20 cursor-not-allowed opacity-50'
-                }`}
-              >
-                <p className="font-poppins text-xs text-purple-300">
-                  {completedRooms.includes('nebula') || failedRooms.includes('nebula') 
-                    ? '🔮 Nebula (Riddle) - Click to reveal' 
-                    : '--- Nebula (Locked)'}
-                </p>
-              </button>
-
-              {/* Comet Answer */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  if ((completedRooms.includes('comet') || failedRooms.includes('comet')) && gameSession.intermediarySongs?.[1]) {
-                    console.log('[ProgressTracker] Showing Comet answer:', gameSession.intermediarySongs[1])
-                    handleShowAnswer('Comet', gameSession.intermediarySongs[1], '🔥', 'orange')
-                  }
-                }}
-                disabled={!completedRooms.includes('comet') && !failedRooms.includes('comet')}
-                className={`w-full text-left p-2 rounded-lg transition-all duration-200 ${
-                  (completedRooms.includes('comet') || failedRooms.includes('comet'))
-                    ? 'bg-orange-900/20 border border-orange-400/30 hover:bg-orange-900/40 hover:border-orange-400/50 cursor-pointer'
-                    : 'bg-gray-900/20 border border-gray-600/20 cursor-not-allowed opacity-50'
-                }`}
-              >
-                <p className="font-poppins text-xs text-orange-300">
-                  {completedRooms.includes('comet') || failedRooms.includes('comet')
-                    ? '🔥 Comet (Lyric) - Click to reveal' 
-                    : '--- Comet (Locked)'}
-                </p>
-              </button>
             </div>
           </details>
         )}
@@ -286,45 +239,21 @@ export function ProgressTracker({ completedRooms, failedRooms = [], currentRoom 
       </AlertDialog>
 
       {/* Answer Reveal Dialog */}
-      <AlertDialog open={showAnswerDialog} onOpenChange={setShowAnswerDialog}>
+      {/* Clue Reveal Dialog */}
+      <AlertDialog open={showClueDialog} onOpenChange={setShowClueDialog}>
         <AlertDialogContent className="glassmorphism border-gold-400/50 max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle className="font-cinzel text-2xl font-bold text-center text-purple-100 flex items-center justify-center gap-2">
-              <span className="text-3xl">{selectedAnswer?.emoji}</span>
-              {selectedAnswer?.room} Answer Revealed
+              {selectedClue?.room && <span>{selectedClue.room} Clue</span>}
             </AlertDialogTitle>
             <AlertDialogDescription className="text-center space-y-4">
-              {selectedAnswer?.song && (
+              {selectedClue?.clue && (
                 <div className="bg-black/30 rounded-lg p-6 border border-gold-400/30">
                   <p className="text-gold-200 font-poppins text-sm mb-4">
-                    The answer was:
+                    {selectedClue.clue}
                   </p>
-                  {selectedAnswer.song.imageUrl && (
-                    <img 
-                      src={selectedAnswer.song.imageUrl} 
-                      alt={selectedAnswer.song.name}
-                      className="w-48 h-48 mx-auto rounded-lg border-2 border-gold-400/50 object-cover mb-4 shadow-lg"
-                    />
-                  )}
-                  <p className="font-cormorant text-2xl font-bold text-gold-100 mb-2">
-                    "{selectedAnswer.song.name}"
-                  </p>
-                  <p className="font-poppins text-lg text-gold-200">
-                    by {selectedAnswer.song.artists.join(', ')}
-                  </p>
-                  {selectedAnswer.song.spotifyUrl && (
-                    <a
-                      href={selectedAnswer.song.spotifyUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-block mt-4 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-full font-poppins text-sm transition-colors"
-                    >
-                      Listen on Spotify 🎵
-                    </a>
-                  )}
                 </div>
               )}
-              
               <p className="text-purple-300 font-poppins text-xs italic">
                 Keep exploring the cosmic mysteries! ✨
               </p>
@@ -333,7 +262,7 @@ export function ProgressTracker({ completedRooms, failedRooms = [], currentRoom 
           <AlertDialogFooter>
             <Button 
               className="mystical-button w-full"
-              onClick={() => setShowAnswerDialog(false)}
+              onClick={() => setShowClueDialog(false)}
             >
               Close
             </Button>

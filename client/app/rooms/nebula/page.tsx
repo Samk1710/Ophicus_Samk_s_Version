@@ -1,8 +1,6 @@
 "use client"
 
-import type React from "react"
-
-import { useState, useEffect } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import { CosmicBackground } from "@/components/cosmic-background"
 import { CosmicLoading } from "@/components/cosmic-loading"
 import { ProgressTracker } from "@/components/progress-tracker"
@@ -32,6 +30,7 @@ export default function NebulaRoom() {
   const [earnedPoints, setEarnedPoints] = useState(0)
   const { sessionId, gameSession, refreshGameState } = useGameState()
   const router = useRouter()
+  const hasFetchedRef = useRef(false)
 
   console.log('[Nebula] Component mounted, session:', sessionId)
   console.log('[Nebula] Game session:', gameSession)
@@ -55,8 +54,15 @@ export default function NebulaRoom() {
       return
     }
     
+    // Prevent duplicate API calls
+    if (hasFetchedRef.current) {
+      console.log('[Nebula] Already fetched, skipping...')
+      return
+    }
+    
+    hasFetchedRef.current = true
     fetchRiddle()
-  }, [sessionId, gameSession])
+  }, [sessionId]) // Only depend on sessionId
 
   const fetchRiddle = async () => {
     console.log('[Nebula] Fetching riddle...')

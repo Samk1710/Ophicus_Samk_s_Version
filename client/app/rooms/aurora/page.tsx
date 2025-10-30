@@ -1,8 +1,6 @@
 "use client"
 
-import type React from "react"
-
-import { useState, useRef, useEffect } from "react"
+import React, { useState, useRef, useEffect } from "react"
 import { CosmicBackground } from "@/components/cosmic-background"
 import { CosmicLoading } from "@/components/cosmic-loading"
 import { ProgressTracker } from "@/components/progress-tracker"
@@ -40,6 +38,7 @@ export default function AuroraRoom() {
   const audioRef = useRef<HTMLAudioElement>(null)
   const { sessionId, gameSession, refreshGameState } = useGameState()
   const router = useRouter()
+  const hasFetchedRef = useRef(false)
 
   console.log('[Aurora] Component mounted, session:', sessionId)
 
@@ -93,8 +92,15 @@ export default function AuroraRoom() {
       return
     }
 
+    // Prevent duplicate API calls
+    if (hasFetchedRef.current) {
+      console.log('[Aurora] Already fetched, skipping...')
+      return
+    }
+    
+    hasFetchedRef.current = true
     fetchAudio()
-  }, [sessionId, gameSession])
+  }, [sessionId]) // Only depend on sessionId
 
   const fetchAudio = async () => {
     console.log('[Aurora] Fetching audio vignette...')

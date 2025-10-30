@@ -1,8 +1,6 @@
 "use client"
 
-import type React from "react"
-
-import { useState, useEffect } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import { CosmicBackground } from "@/components/cosmic-background"
 import { CosmicLoading } from "@/components/cosmic-loading"
 import { ProgressTracker } from "@/components/progress-tracker"
@@ -40,6 +38,7 @@ export default function CometRoom() {
   const [revealedSong, setRevealedSong] = useState<any>(null)
   const { sessionId, gameSession, refreshGameState } = useGameState()
   const router = useRouter()
+  const hasFetchedRef = useRef(false)
 
   console.log('[Comet] Component mounted, session:', sessionId)
 
@@ -61,8 +60,15 @@ export default function CometRoom() {
       return
     }
     
+    // Prevent duplicate API calls
+    if (hasFetchedRef.current) {
+      console.log('[Comet] Already fetched, skipping...')
+      return
+    }
+    
+    hasFetchedRef.current = true
     fetchLyric()
-  }, [sessionId, gameSession])
+  }, [sessionId]) // Only depend on sessionId
 
   const fetchLyric = async () => {
     console.log('[Comet] Fetching lyric fragment...')
