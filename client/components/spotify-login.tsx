@@ -73,7 +73,7 @@ export function SpotifyLogin() {
               Ophiuchus
             </h1>
             <p className="font-cormorant text-xl text-purple-200 mb-2">
-              The 13th Zodiac of Songs
+              The 13th Zodiac of Music
             </p>
             <p className="font-poppins text-sm text-purple-300/80">
               Unlock your cosmic musical destiny

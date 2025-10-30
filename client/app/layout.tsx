@@ -36,9 +36,9 @@ const cinzelDecorative = Cinzel_Decorative({
 })
 
 export const metadata: Metadata = {
-  title: "Ophiuchus: The 13th Zodiac of Songs",
+  title: "Ophiuchus(Samk's Version)",
   description: "A cosmic musical quest through the stars",
-  generator: 'v0.dev',
+  generator: 'Samk',
   icons: {
     icon: [
       { url: '/ophiuchus-logo.png', type: 'image/png' },
