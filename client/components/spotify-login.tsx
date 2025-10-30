@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { signIn } from "next-auth/react";
+import { useState, useEffect } from "react";
+import { signIn, useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CelestialIcon } from "@/components/celestial-icon";
@@ -9,6 +10,16 @@ import { Music, Shield, Zap } from "lucide-react";
 
 export function SpotifyLogin() {
   const [isLoading, setIsLoading] = useState(false);
+  const { data: session, status } = useSession();
+  const router = useRouter();
+
+  // Redirect to astral-nexus if already logged in
+  useEffect(() => {
+    if (status === "authenticated" && session) {
+      console.log('[SpotifyLogin] User already authenticated, redirecting to astral-nexus');
+      router.push('/astral-nexus');
+    }
+  }, [status, session, router]);
 
   const handleSpotifyLogin = async () => {
     setIsLoading(true);

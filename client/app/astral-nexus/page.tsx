@@ -307,16 +307,16 @@ export default function AstralNexus() {
             )}
           </div>
 
-          {/* Planet Grid - Centered */}
+          {/* Planet Grid - Centered 2x2 Bento Style */}
           {sessionId && gameSession && (
             <div className="flex justify-center mb-12">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-4xl w-full px-4">
                 {planets.map((planet, index) => {
                   const isCompleted = completedRooms.includes(planet.id)
                   return (
                     <Card
                       key={planet.id}
-                      className={`glassmorphism ${planet.borderColor} p-6 cursor-pointer transition-all duration-300 group relative overflow-hidden`}
+                      className={`glassmorphism ${planet.borderColor} p-8 cursor-pointer transition-all duration-300 group relative overflow-hidden hover:scale-105 hover:shadow-2xl`}
                       style={{
                         backgroundImage: `url('/images/golden-frame.png')`,
                         backgroundSize: "cover",

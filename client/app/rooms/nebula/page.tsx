@@ -183,17 +183,6 @@ export default function NebulaRoom() {
       <CosmicBackground />
       <ProgressTracker completedRooms={completedRooms} failedRooms={failedRooms} currentRoom="nebula" />
 
-      {/* Moon Phases Background */}
-      <div
-        className="absolute inset-0 opacity-20"
-        style={{
-          backgroundImage: `url('/images/moon-phases.png')`,
-          backgroundSize: "contain",
-          backgroundPosition: "center",
-          backgroundRepeat: "no-repeat",
-        }}
-      />
-
       {/* Nebula Mist Overlay */}
       <div className="absolute inset-0 bg-gradient-to-b from-purple-900/20 via-transparent to-indigo-900/20 pointer-events-none" />
 
@@ -228,17 +217,6 @@ export default function NebulaRoom() {
 
           {/* Riddle Card */}
           <Card className="glassmorphism border-purple-400/50 p-8 mb-8 relative overflow-hidden">
-            {/* Card Background */}
-            <div
-              className="absolute inset-0 opacity-10"
-              style={{
-                backgroundImage: `url('/images/lunar-wheel.png')`,
-                backgroundSize: "200px",
-                backgroundPosition: "center",
-                backgroundRepeat: "no-repeat",
-              }}
-            />
-
             <div className="relative z-10">
               <div className="text-center mb-6">
                 <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-purple-500/30 to-indigo-600/30 flex items-center justify-center pulse-glow">

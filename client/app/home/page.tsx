@@ -90,12 +90,11 @@ export default function HomePage() {
             <Card className="glassmorphism border-purple-400/30 p-8 max-w-md">
               <div className="mb-6">
                 <CelestialIcon type="eye" size="xl" className="text-purple-400 mx-auto mb-4" />
-                <h3 className="font-cinzel text-2xl font-bold text-purple-100 mb-2">Embark on Your Quest</h3>
-                <p className="font-poppins text-purple-200 text-sm">
-                  {session ? 
-                    "Discover your cosmic song through the celestial chambers" :
-                    "Connect your Spotify to unlock your cosmic realm"
-                  }
+                <h3 className="font-cinzel text-2xl font-bold text-purple-400 mb-2 text-center">Embark on Your Quest</h3>
+                <p className="font-poppins text-purple-200 text-sm text-center">
+
+                    "Discover your cosmic song through the celestial chambers"
+                  
                 </p>
               </div>
 
@@ -203,43 +202,38 @@ export default function HomePage() {
                 </p>
               </div>
 
-              {/* Desktop Grid */}
-              <div className="hidden md:grid grid-cols-6 grid-rows-3 gap-4 h-[600px]">
+              {/* Desktop Grid - 2x2 Bento Style */}
+              <div className="hidden md:grid grid-cols-2 gap-6">
                 {loading ? (
                   <>
-                    <div className="col-span-2 row-span-3">
+                    <div className="row-span-2">
                       <TopArtistCard />
                     </div>
-                    <div className="col-span-3 row-span-2">
+                    <div className="row-span-2">
                       <SkeletonStatsCard size="lg" />
                     </div>
-                    <div className="col-span-1 row-span-1">
-                      <SkeletonStatsCard size="md" />
-                    </div>
-                    <div className="col-span-2 row-span-1">
-                      <SkeletonStatsCard size="md" />
-                    </div>
-                    <div className="col-span-1 row-span-1">
-                      <SkeletonStatsCard size="md" />
-                    </div>
-                    <div className="col-span-1 row-span-1">
-                      <SkeletonStatsCard size="md" />
+                    <div className="col-span-2">
+                      <div className="grid grid-cols-3 gap-4">
+                        <SkeletonStatsCard size="md" />
+                        <SkeletonStatsCard size="md" />
+                        <SkeletonStatsCard size="md" />
+                      </div>
                     </div>
                   </>
                 ) : (
                   <>
-                    {/* Top Artist Card - Large focal point */}
-                    <div className="col-span-2 row-span-3">
+                    {/* Top Artist Card - Left side, full height */}
+                    <div className="row-span-2">
                       <TopArtistCard artist={userData?.topArtist || undefined} />
                     </div>
                     
-                    {/* Top Track Card - Hero section */}
-                    <div className="col-span-3 row-span-2">
-                      <Card className="glassmorphism border-gold-400/30 p-6 relative overflow-hidden group hover:scale-[1.02] transition-all duration-500 h-full">
+                    {/* Top Track Card - Right top, full height */}
+                    <div className="row-span-2">
+                      <Card className="glassmorphism border-gold-400/30 p-6 relative overflow-hidden group hover:scale-[1.02] transition-all duration-500 h-full flex flex-col">
                         <div className="absolute inset-0 bg-gradient-to-br from-purple-600/20 to-pink-600/20 opacity-60" />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
                         <div className="relative z-10 h-full flex flex-col">
-                          <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center justify-between mb-6">
                             <div className="flex items-center gap-2">
                               <Music className="w-5 h-5 text-purple-400" />
                               <h3 className="font-cinzel text-xl font-bold text-gold-100">Top Cosmic Track</h3>
@@ -247,8 +241,8 @@ export default function HomePage() {
                             <CelestialIcon type="sun" size="sm" className="text-gold-400" />
                           </div>
                           {userData?.topTracks && userData.topTracks.length > 0 ? (
-                            <div className="flex-1 flex items-center gap-6">
-                              <div className="w-20 h-20 rounded-xl overflow-hidden bg-gradient-to-br from-purple-600/30 to-pink-600/30 flex items-center justify-center shadow-2xl">
+                            <div className="flex-1 flex flex-col justify-center gap-6">
+                              <div className="w-32 h-32 mx-auto rounded-xl overflow-hidden bg-gradient-to-br from-purple-600/30 to-pink-600/30 flex items-center justify-center shadow-2xl">
                                 {userData.topTracks[0].album?.images?.[0]?.url ? (
                                   <img 
                                     src={userData.topTracks[0].album.images[0].url} 
@@ -256,14 +250,14 @@ export default function HomePage() {
                                     className="w-full h-full object-cover"
                                   />
                                 ) : (
-                                  <CelestialIcon type="sun" size="lg" className="text-purple-400" />
+                                  <CelestialIcon type="sun" size="xl" className="text-purple-400" />
                                 )}
                               </div>
-                              <div className="flex-1 min-w-0">
-                                <h4 className="font-cinzel text-2xl font-bold text-gold-100 mb-2 truncate">
+                              <div className="text-center">
+                                <h4 className="font-cinzel text-2xl font-bold text-gold-100 mb-2">
                                   {userData.topTracks[0].name}
                                 </h4>
-                                <p className="font-poppins text-lg text-purple-300 mb-1 truncate">
+                                <p className="font-poppins text-lg text-purple-300 mb-2">
                                   {userData.topTracks[0].artists.map((artist: any) => artist.name).join(", ")}
                                 </p>
                                 <p className="font-poppins text-sm text-purple-400">Your most played anthem</p>
@@ -281,64 +275,54 @@ export default function HomePage() {
                       </Card>
                     </div>
 
-                    {/* Top Genre - Compact card */}
-                    <div className="col-span-1 row-span-1">
-                      <Card className="glassmorphism border-gold-400/30 p-4 relative overflow-hidden group hover:scale-105 transition-all duration-300 h-full">
-                        <div className="absolute inset-0 bg-gradient-to-br from-green-600/20 to-teal-600/20 opacity-60" />
-                        <div className="relative z-10 h-full flex flex-col">
-                          <div className="flex items-center justify-between mb-3">
-                            <TrendingUp className="w-4 h-4 text-green-400" />
-                            <CelestialIcon type="mystical" size="sm" className="text-gold-400" />
-                          </div>
-                          <div className="flex-1 flex flex-col justify-center">
-                            <h4 className="font-poppins text-xs text-purple-300 mb-1">Top Genre</h4>
-                            <p className="font-cinzel text-lg font-bold text-gold-100 truncate">
+                    {/* Bottom Row - Three stat cards */}
+                    <div className="col-span-2">
+                      <div className="grid grid-cols-3 gap-4">
+                        {/* Top Genre */}
+                        <Card className="glassmorphism border-gold-400/30 p-6 relative overflow-hidden group hover:scale-105 transition-all duration-300">
+                          <div className="absolute inset-0 bg-gradient-to-br from-green-600/20 to-teal-600/20 opacity-60" />
+                          <div className="relative z-10 text-center">
+                            <div className="flex items-center justify-center mb-3">
+                              <TrendingUp className="w-5 h-5 text-green-400" />
+                            </div>
+                            <h4 className="font-poppins text-xs text-purple-300 mb-2">Top Genre</h4>
+                            <p className="font-cinzel text-xl font-bold text-gold-100 mb-2 truncate">
                               {userData?.topGenre || "— — —"}
                             </p>
-                            <p className="font-poppins text-xs text-purple-400 mt-1">Your frequency</p>
+                            <CelestialIcon type="mystical" size="sm" className="text-gold-400 mx-auto" />
                           </div>
-                        </div>
-                      </Card>
-                    </div>
+                        </Card>
 
-                    {/* Tracks Played - Medium card */}
-                    <div className="col-span-2 row-span-1">
-                      <Card className="glassmorphism border-gold-400/30 p-4 relative overflow-hidden group hover:scale-105 transition-all duration-300 h-full">
-                        <div className="absolute inset-0 bg-gradient-to-br from-orange-600/20 to-red-600/20 opacity-60" />
-                        <div className="relative z-10 h-full flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <Headphones className="w-5 h-5 text-orange-400" />
-                            <div>
-                              <h4 className="font-poppins text-xs text-purple-300 mb-1">Tracks Played</h4>
-                              <p className="font-cinzel text-2xl font-bold text-gold-100">
-                                {userData?.tracksPlayed ? userData.tracksPlayed.toString() : "— — —"}
-                              </p>
-                              <p className="font-poppins text-xs text-purple-400">This month</p>
+                        {/* Tracks Played */}
+                        <Card className="glassmorphism border-gold-400/30 p-6 relative overflow-hidden group hover:scale-105 transition-all duration-300">
+                          <div className="absolute inset-0 bg-gradient-to-br from-orange-600/20 to-red-600/20 opacity-60" />
+                          <div className="relative z-10 text-center">
+                            <div className="flex items-center justify-center mb-3">
+                              <Headphones className="w-5 h-5 text-orange-400" />
                             </div>
+                            <h4 className="font-poppins text-xs text-purple-300 mb-2">Tracks Played</h4>
+                            <p className="font-cinzel text-2xl font-bold text-gold-100 mb-2">
+                              {userData?.tracksPlayed ? userData.tracksPlayed.toString() : "— — —"}
+                            </p>
+                            <CelestialIcon type="constellation" size="sm" className="text-gold-400 mx-auto" />
                           </div>
-                          <CelestialIcon type="constellation" size="sm" className="text-gold-400" />
-                        </div>
-                      </Card>
-                    </div>
+                        </Card>
 
-                    {/* Discovery Score - Compact card */}
-                    <div className="col-span-1 row-span-1">
-                      <Card className="glassmorphism border-gold-400/30 p-4 relative overflow-hidden group hover:scale-105 transition-all duration-300 h-full">
-                        <div className="absolute inset-0 bg-gradient-to-br from-yellow-600/20 to-orange-600/20 opacity-60" />
-                        <div className="relative z-10 h-full flex flex-col">
-                          <div className="flex items-center justify-between mb-3">
-                            <Zap className="w-4 h-4 text-yellow-400" />
-                            <CelestialIcon type="eye" size="sm" className="text-gold-400" />
-                          </div>
-                          <div className="flex-1 flex flex-col justify-center">
-                            <h4 className="font-poppins text-xs text-purple-300 mb-1">Discovery</h4>
-                            <p className="font-cinzel text-lg font-bold text-gold-100">
+                        {/* Discovery Score */}
+                        <Card className="glassmorphism border-gold-400/30 p-6 relative overflow-hidden group hover:scale-105 transition-all duration-300">
+                          <div className="absolute inset-0 bg-gradient-to-br from-yellow-600/20 to-orange-600/20 opacity-60" />
+                          <div className="relative z-10 text-center">
+                            <div className="flex items-center justify-center mb-3">
+                              <Zap className="w-5 h-5 text-yellow-400" />
+                            </div>
+                            <h4 className="font-poppins text-xs text-purple-300 mb-2">Discovery</h4>
+                            <p className="font-cinzel text-xl font-bold text-gold-100 mb-2">
                               {userData?.discoveryScore ? `${userData.discoveryScore}%` : "— —"}
                             </p>
-                            <p className="font-poppins text-xs text-purple-400 mt-1">Explorer level</p>
+                            <CelestialIcon type="eye" size="sm" className="text-gold-400 mx-auto" />
                           </div>
-                        </div>
-                      </Card>
+                        </Card>
+                      </div>
                     </div>
                   </>
                 )}
