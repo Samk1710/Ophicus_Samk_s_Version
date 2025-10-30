@@ -9,16 +9,23 @@ export interface CometLyricFlash {
 export async function generateCometLyric(intermediarySong: ISong): Promise<CometLyricFlash> {
   console.log('[generateCometLyric] Generating lyric flash for:', intermediarySong.name);
 
-  const prompt = `Extract or create a memorable, distinctive lyric line from this song:
+const prompt = `
+Extract one authentic, memorable lyric line from the following song.
 
 Song: ${intermediarySong.name}
 Artist: ${intermediarySong.artists.join(', ')}
 
-Return ONLY one lyric line that is distinctive and memorable from this song.
-If you don't know the exact lyrics, create a line that captures the song's essence.
-Keep it to one line, maximum 15 words.
+Guidelines:
+- The line should be taken directly from the song’s actual lyrics if possible.
+- Try your absolute best to recall or identify the exact lyric — do not give up easily.
+- Only if you are less than 30% confident about the real lyric, then create a line that feels completely believable and stylistically identical to the artist’s tone and the song’s theme.
+- The line must sound like something that truly belongs in that song.
+- Keep it concise: one line, maximum 15 words.
+- Do NOT include quotation marks, commentary, or any extra text.
 
-Return ONLY the lyric text, nothing else.`;
+Return ONLY the lyric line, nothing else.
+`;
+
 
   const lyric = await generate(prompt);
   console.log('[generateCometLyric] Lyric generated:', lyric.trim());

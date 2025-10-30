@@ -7,20 +7,71 @@ export interface AuroraEmotionalSituation {
   audioUrl: string;
 }
 
-// Common emotional situations
+// Expanded emotional situations — covering broader emotional spectrum
 const EMOTIONAL_SITUATIONS = [
+  // Love & Relationships
   'heartbroken after a breakup',
   'experiencing first love',
   'crushing on someone',
   'yearning for someone far away',
+  'feeling unloved in a relationship',
+  'trying to move on but still in love',
+  'realizing you fell for your best friend',
+  'waiting for someone who might never come back',
+  'being in a long-distance relationship',
+  'finally confessing your feelings',
+  'watching someone you love fall for someone else',
+  'getting over a toxic ex',
+  'questioning if love was ever real',
+  'feeling invisible to the one you like',
+
+  // Growth & Life
   'struggling with adulting and life responsibilities',
   'feeling lost and searching for meaning',
-  'celebrating a major achievement',
-  'dealing with loneliness',
-  'missing someone deeply',
+  'trying to figure out who you are',
+  'recovering from burnout',
+  'feeling stuck in a routine',
+  'starting a new chapter in life',
+  'graduating and not knowing what’s next',
+  'facing rejection and self-doubt',
+  'finally finding your purpose',
+  'overcoming fear of failure',
+  'starting over in a new city',
+  'healing from emotional pain',
+  'finally learning to love yourself',
+
+  // Nostalgia & Reflection
   'feeling nostalgic about the past',
-  'going through a difficult transition',
-  'healing from emotional pain'
+  'missing how things used to be',
+  'remembering childhood innocence',
+  'missing someone deeply',
+  'revisiting old places and memories',
+  'feeling like time is slipping away',
+  'looking through old photos',
+  'feeling bittersweet about growing up',
+  'missing the simplicity of youth',
+
+  // Loneliness & Mental Struggle
+  'dealing with loneliness',
+  'feeling isolated even around people',
+  'pretending to be okay when you’re not',
+  'feeling like no one understands you',
+  'overthinking late at night',
+  'wanting to disappear for a while',
+  'feeling like you’re not enough',
+  'carrying emotional baggage silently',
+  'fighting with your own thoughts',
+
+  // Hope & Triumph
+  'celebrating a major achievement',
+  'finally finding peace after chaos',
+  'falling in love with life again',
+  'forgiving someone who hurt you',
+  'forgiving yourself for past mistakes',
+  'learning to let go of control',
+  'feeling proud after overcoming something hard',
+  'embracing change instead of fearing it',
+  'starting to believe in yourself again'
 ];
 
 export async function generateAuroraEmotionalSituation(): Promise<AuroraEmotionalSituation> {
@@ -34,18 +85,21 @@ export async function generateAuroraEmotionalSituation(): Promise<AuroraEmotiona
   const audioPrompt = `Create a short, emotional monologue (3-4 sentences, max 60 seconds when spoken) of someone going through this situation: ${situation}.
 
 Make it:
-- REALISTIC and RELATABLE - like a real person talking
+- REALISTIC and RELATABLE — like a real person talking to themselves or a close friend
 - EMOTIONAL but not overdramatic
 - Hint at the situation WITHOUT explicitly stating it
 - Use natural, conversational language
-- Show emotion through words and tone
+- Show emotion through tone, pauses, and choice of words
 
 Examples:
-- For breakup: "I keep checking my phone even though I know they won't text. God, why is it so quiet here? Everything reminds me of them... I just want to stop feeling like this."
-- For first job: "I can't believe I actually did it! Mom called and I tried to play it cool but I was literally jumping around my apartment. This is real, this is actually happening!"
-- For adulting: "When did life get so... exhausting? Bills, groceries, work, repeat. I thought being an adult would feel different, you know? More... together."
+- Breakup: "I keep checking my phone even though I know they won’t text. It's like my mind’s on repeat — every song, every street, it’s all them. I just wish it would stop hurting for one night."
+- First Love: "They smiled and suddenly, everything felt... new. Like I’d been living in grayscale until now. How do you even explain that feeling? It’s ridiculous and perfect at the same time."
+- Adulting: "No one tells you how quiet life gets when you’re just... doing what you’re supposed to. Work, bills, sleep, repeat. Sometimes I wonder if this is what growing up really means — learning to keep going anyway."
+- Loneliness: "I’ve been scrolling for hours but nothing feels right. Everyone looks so happy, and I just... I can’t remember the last time I really laughed like that."
+- Nostalgia: "It’s weird, isn’t it? How a song can take you back years in a heartbeat. Suddenly you’re sixteen again, laughing about nothing, and for a moment — everything feels whole."
+- Hope after pain: "I thought I’d never feel light again, but here it is — quiet, gentle, real. Maybe healing isn’t loud. Maybe it’s just breathing without breaking."
 
-Write ONLY the monologue, nothing else. Make it emotional and authentic.`;
+Write ONLY the monologue, nothing else. Make it raw, emotional, and human.`;
 
   const audioText = await generate(audioPrompt);
   console.log('[generateAuroraEmotionalSituation] Audio text generated');
@@ -80,23 +134,24 @@ THEIR WORDS: "${audioText}"
 
 SUGGESTED SONG: "${userGuessedSong.name}" by ${userGuessedSong.artists.join(', ')}
 
-Rate how appropriate and helpful this song suggestion is on a scale of 0-10:
+Rate how appropriate and emotionally resonant this song is on a scale of 0-10.
 
 Consider:
-- Does the song's mood match the emotional state?
-- Would this song help or comfort someone in this situation?
-- Is the lyrical content relevant?
-- Does the energy level match what they might need?
+- Does the song’s mood align with the emotional tone?
+- Would listening to this song help or comfort the person?
+- Are the lyrics and energy fitting for this emotional state?
+- Does it feel emotionally authentic?
 
 Examples:
-- "The Night We Met" by Lord Huron for someone crying after a breakup: 9-10 (perfect match - melancholic, nostalgic, about lost love)
-- "Jingle Bells" for someone crying after a breakup: 1-2 (terrible match - upbeat, holiday cheer, completely wrong mood)
-- "Happy" by Pharrell for someone celebrating first job: 9-10 (great match - joyful, celebratory)
-- "Hurt" by Johnny Cash for celebrating first job: 2-3 (wrong mood - dark and painful)
+- "The Night We Met" by Lord Huron for someone crying after a breakup: 10 (haunting, emotional, perfectly fits heartbreak)
+- "Jingle Bells" for someone crying after a breakup: 1 (cheerful, opposite mood)
+- "Happy" by Pharrell for someone celebrating a first job: 9 (bright, joyful, uplifting)
+- "Hurt" by Johnny Cash for celebrating a first job: 2 (somber, off-tone)
+- "Let It Be" by The Beatles for someone learning to heal: 9 (gentle, comforting, wise)
 
 Return your response in this EXACT format:
 SCORE: [0-10]
-FEEDBACK: [One sentence explaining why this score - be honest and specific]`;
+FEEDBACK: [One sentence explaining why this score - honest, emotional, and specific]`;
 
   const response = await generate(prompt);
   console.log('[scoreAuroraSongMatch] AI response:', response);
@@ -131,13 +186,14 @@ Song: ${cosmicSong.name}
 Artist: ${cosmicSong.artists.join(', ')}
 
 The clue should:
-- Hint at the FEELING or MOOD of the song
-- Be celestial and mystical
-- Be 1-2 sentences
+- Capture the song’s emotional essence or the feeling it leaves behind
+- Be celestial and mystical in tone
+- Use metaphors of light, time, and emotion
+- Be 1-2 sentences long
 - NOT mention the title or artist
-- Help the player understand what kind of emotion to look for
+- Help the listener understand the emotional soul of the song
 
-Example: "The cosmic song carries the weight of bittersweet memories, a melody that speaks to hearts that have loved and lost."
+Example: "This melody feels like a sunrise after long nights — quiet, hopeful, and full of soft healing."
 
 Return ONLY the clue text, nothing else.`;
 
