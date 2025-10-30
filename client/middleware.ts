@@ -1,35 +1,5 @@
-import { withAuth } from "next-auth/middleware";
-import { NextResponse } from "next/server";
+export { default } from "next-auth/middleware";
 
-export default withAuth(
-  function middleware(req) {
-    // Allow the request to proceed if authenticated
-    return NextResponse.next();
-  },
-  {
-    callbacks: {
-      authorized: ({ token, req }) => {
-        const path = req.nextUrl.pathname;
-        
-        // Public routes that don't require authentication
-        const publicRoutes = ["/", "/login"];
-        
-        // Allow access to public routes
-        if (publicRoutes.includes(path)) {
-          return true;
-        }
-        
-        // For all other routes, require authentication
-        return !!token;
-      },
-    },
-    pages: {
-      signIn: "/login",
-    },
-  }
-);
-
-// Protect all routes except public ones
 export const config = {
   matcher: [
     /*
@@ -38,7 +8,9 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - public files (images, audio, etc.)
+     * - API routes
+     * - Public pages (/, /login)
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|mp3|wav|ogg|ico)).*)",
+    "/((?!_next/static|_next/image|favicon.ico|api|login|$).*)",
   ],
 };
